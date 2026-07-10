@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+.pytest_cache/
+uv.lock
+# LaTeX build artefacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/*.pdf

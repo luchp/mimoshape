@@ -1,0 +1,29 @@
+[project]
+name = "synthsig"
+version = "0.1.0"
+description = "Phase-domain synthesis of MIMO signals with target CSD and higher-order (cross-)moments"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Luc Holtkamp", email = "luc@sensemagic.nl" }]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "nlopt>=2.7",
+]
+
+[project.optional-dependencies]
+examples = ["matplotlib"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/synthsig"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

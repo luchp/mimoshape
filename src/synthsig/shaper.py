@@ -1,0 +1,181 @@
+"""MIMO phase-shaping synthesiser.
+
+``SynthesisProblem`` assembles the loss and analytic gradient from a target
+set (pure numerics, testable without an optimiser).  ``MimoShaper`` wires the
+problem into NLopt's CCSAQ and produces signal blocks.
+"""
+
+import time
+from dataclasses import dataclass, field
+
+import numpy as np
+import nlopt
+
+from . import moments
+
+
+@dataclass(frozen=True)
+class MomentTarget:
+    """Target for a normalised joint moment ``M_i``.
+
+    ``indices`` is the channel tuple (length >= 3), e.g. ``(k, k, k)`` for
+    skewness of channel k, ``(i, i, j, j)`` for the pair co-kurtosis.
+    """
+
+    indices: tuple
+    value: float
+    weight: float = 1.0
+
+    def __post_init__(self):
+        if len(self.indices) < 3:
+            raise ValueError(
+                f"Moment tuple {self.indices} has order {len(self.indices)}; "
+                "order >= 3 required (second order is fixed by the CSD)"
+            )
+
+
+@dataclass(frozen=True)
+class EndpointTarget:
+    """Head value and slope constraint for channel ``k`` (C1 block splicing)."""
+
+    channel: int
+    value: float = 0.0
+    slope: float = 0.0
+    value_weight: float = 1.0
+    slope_weight: float = 1.0
+
+
+@dataclass
+class SynthesisProblem:
+    """Loss and analytic gradient for a target set under a fixed ``H``.
+
+    ``H`` has shape ``(Nj, Nj, Nf)`` with zero DC and Nyquist bins, typically
+    a Cholesky factor of the target CSD per frequency bin.
+    """
+
+    H: np.ndarray
+    targets: list = field(default_factory=list)
+    endpoints: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.H = np.asarray(self.H, dtype=complex)
+        if self.H.ndim != 3 or self.H.shape[0] != self.H.shape[1]:
+            raise ValueError(f"H must be (Nj, Nj, Nf), got {self.H.shape}")
+        if np.any(self.H[:, :, 0] != 0) or np.any(self.H[:, :, -1] != 0):
+            raise ValueError("H must have zero DC and Nyquist bins")
+        nt = 2 * (self.H.shape[2] - 1)
+        if nt < 8 or (nt & (nt - 1)) != 0:
+            raise ValueError(f"Block length {nt} must be a power of 2 (>= 8)")
+        nj = self.H.shape[0]
+        for t in self.targets:
+            if any(not 0 <= i < nj for i in t.indices):
+                raise ValueError(f"Target {t.indices} out of range for {nj} channels")
+        for e in self.endpoints:
+            if not 0 <= e.channel < nj:
+                raise ValueError(f"Endpoint channel {e.channel} out of range")
+
+    @property
+    def num_channels(self):
+        return self.H.shape[0]
+
+    @property
+    def num_free_phases(self):
+        return self.H.shape[0] * (self.H.shape[2] - 2)
+
+    def loss(self, phase, grad_out=None):
+        """Weighted squared-error loss; fills ``grad_out`` (same shape as
+        ``phase``) with the analytic gradient when provided."""
+        u, v, x = moments.uvx(self.H, phase)
+        want_grad = grad_out is not None
+        total = 0.0
+        grad = np.zeros_like(u, dtype=float) if want_grad else None
+
+        for t in self.targets:
+            if want_grad:
+                m, dm = moments.grad_normalized_moment(self.H, u, v, x, t.indices)
+                grad += (t.weight * (m - t.value)) * dm
+            else:
+                m = moments.normalized_moment(x, t.indices)
+            total += 0.5 * t.weight * (m - t.value) ** 2
+
+        if self.endpoints:
+            head = moments.endpoint_value(self.H, u)
+            slope = moments.endpoint_slope(self.H, u)
+            for e in self.endpoints:
+                err0 = head[e.channel] - e.value
+                err1 = slope[e.channel] - e.slope
+                total += 0.5 * (e.value_weight * err0**2 + e.slope_weight * err1**2)
+                if want_grad:
+                    grad += (e.value_weight * err0) * moments.grad_endpoint_value(
+                        self.H, u, e.channel
+                    )
+                    grad += (e.slope_weight * err1) * moments.grad_endpoint_slope(
+                        self.H, u, e.channel
+                    )
+
+        if want_grad:
+            grad_out[:] = grad[:, 1:-1]
+        return total
+
+    def signal(self, phase):
+        """Time signal ``x`` for the given free phases, shape ``(Nj, Nt)``."""
+        return moments.uvx(self.H, phase)[2]
+
+
+class MimoShaper:
+    """Optimises the free phases of a ``SynthesisProblem`` with CCSAQ.
+
+    ``progress`` is an optional callable ``progress(loss) -> bool``; returning
+    True stops the optimisation.  Reporting stays out of the core numerics.
+    """
+
+    def __init__(
+        self,
+        problem,
+        progress=None,
+        max_time=60.0,
+        stop_loss=1e-4,
+        ftol_rel=1e-5,
+        xtol_rel=1e-5,
+        rng=None,
+    ):
+        self.problem = problem
+        self.progress = progress
+        self.max_time = max_time
+        self.stop_loss = stop_loss
+        self.ftol_rel = ftol_rel
+        self.xtol_rel = xtol_rel
+        self.rng = np.random.default_rng() if rng is None else rng
+        self.last_result = None
+
+    def _objective(self, flat_phase, flat_grad):
+        phase = flat_phase.reshape(self.problem.num_channels, -1)
+        if flat_grad.size > 0:
+            grad = np.empty_like(phase)
+            loss = self.problem.loss(phase, grad)
+            flat_grad[:] = grad.ravel()
+        else:
+            loss = self.problem.loss(phase)
+        if self.progress is not None and self.progress(loss):
+            raise nlopt.ForcedStop(1)
+        return loss
+
+    def make_block(self):
+        """Optimise from a fresh random phase and return the time signal
+        ``x`` of shape ``(Nj, Nt)``."""
+        n = self.problem.num_free_phases
+        start = self.rng.uniform(-np.pi, np.pi, n)
+
+        opt = nlopt.opt(nlopt.LD_CCSAQ, n)
+        opt.set_lower_bounds(np.full(n, -np.pi))
+        opt.set_upper_bounds(np.full(n, np.pi))
+        opt.set_min_objective(self._objective)
+        opt.set_maxtime(self.max_time)
+        opt.set_stopval(self.stop_loss)
+        opt.set_ftol_rel(self.ftol_rel)
+        opt.set_xtol_rel(self.xtol_rel)
+
+        flat = opt.optimize(start)
+        self.last_result = opt.last_optimize_result()
+        phase = flat.reshape(self.problem.num_channels, -1)
+        return self.problem.signal(phase)
