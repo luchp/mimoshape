@@ -128,7 +128,7 @@ Frequency-domain synthesis of stationary Gaussian random processes with a prescr
 
 Non-Gaussian shaping falls into two broad families. \emph{Amplitude-domain warping} transforms a Gaussian signal through a memoryless nonlinearity chosen to hit a target skew/kurtosis; the Hermite polynomial transform of Winterstein~\cite{winterstein1988nonlinear} is the canonical example. It is simple and closed-form but distorts the spectrum. \emph{Phase manipulation} keeps $|U(f)|$ fixed and manipulates $\arg U(f)$ so that the moments of the inverse-FFT time signal reach the target, leaving the (auto-)spectrum invariant by construction. The IFFT phase-manipulation method of Steinwolf~\cite{steinwolf2011ifft,steinwolf2011twr,steinwolf_book_ngaussian} is the closest prior art to the present work and is single-channel; extensions to multi-axial excitation with a synthetic road profile appear in Saathoff \emph{et al.}~\cite{saathoff2006synthetic}. The present paper generalises Steinwolf's construction to full MIMO with prescribed CSD, adds \emph{joint} cross-moments (co-skewness, co-kurtosis) to the target set, and provides closed-form analytic gradients for gradient-based optimisation. The phase-only, magnitude-fixed nature of the problem also places it in the broad family of phase-retrieval algorithms~\cite{gerchberg1972practical,fienup1982phase}, although here the constraint set is on time-domain moments rather than on a second image plane.
 
-Related nonlinear-identification techniques (Volterra series, parallel cascades, block-oriented models) and their use inside iterative test-control loops~\cite{bendat1998nonlinear,pintelon_schoukens_ident,schoukens_odd_multisine} motivate the multi-axial setup but are not the subject of this paper; a companion note develops that connection separately.
+Related nonlinear-identification techniques (Volterra series, parallel cascades, block-oriented models) and their use inside iterative test-control loops~\cite{bendat1998nonlinear,pintelon_schoukens_ident,schoukens_odd_multisine} motivate the multi-axial setup but are not the subject of this paper; a companion note develops that connection separately. The framework presented here is not a purely academic construction: variants of it have been deployed by the author in several industrial projects for customers, in particular for model-estimation campaigns driven by minimum-kurtosis excitation, where concentrating the available actuator headroom into a dense, low-crest drive signal maximises the signal-to-noise ratio of the estimated response models.
 
 %=============================================================================================================================
 \section*{Definitions of signals and moments}
@@ -302,6 +302,27 @@ No additional FFT is required: the endpoint contribution to the total gradient i
 The endpoint constraint removes $2 N_j$ degrees of freedom from the $N_j\mat{N_t/2-1}$-dimensional phase space -- a fraction that vanishes as $N_t\to\infty$ -- and so interacts benignly with the moment targets at any practically useful block length.
 
 %=============================================================================================================================
+\subsection*{Direct minimisation: a smooth crest-factor surrogate}
+%=============================================================================================================================
+
+For model estimation and endurance testing one often wants the \emph{opposite} of heavy tails: minimum kurtosis and minimum crest factor $\max_t\abs{x_{k t}}/s_k$ (with $s_k = \sqrt{P_{(k,k)}}$), concentrating the signal energy and maximising the drive level attainable within actuator limits. The crest factor itself is a poor optimisation objective: its gradient is supported only at the extremal sample, so a gradient step relocates the peak elsewhere in the block and the optimiser hops between candidate peaks without converging. Minimising the kurtosis $M_{k^{(4)}}$ instead is smooth but weights peaks only polynomially and stalls at a crest well above the achievable floor; higher even moments ($M_{k^{(8)}}$, $M_{k^{(16)}}$) push further but exhibit the same plateau behaviour.
+
+A smooth surrogate with \emph{exponential} peak weighting resolves this. For channel $k$ define
+\begin{eqnarray}
+\Xi_{\m{crest}} &=& \frac{w}{\beta}\,\ln\mat{\frac{1}{N_t}\sum_{t=0}^{N_t-1}\cosh z_{k t}},
+\qquad z_{k t} \;=\; \frac{\beta\, x_{k t}}{s_k},
+\end{eqnarray}
+which approaches $w \max_t \abs{x_{k t}}/s_k$ from below as $\beta\to\infty$, with bias of order $\ln\mat{2 N_t}/\beta$. This term is added directly to the loss (it has no target value) and its gradient is one more instance of the key observation: with $C = \frac{1}{N_t}\sum_t \cosh z_{k t}$,
+\begin{eqnarray}
+\frac{\partial \Xi_{\m{crest}}}{\partial \psi_{q g}}
+	&=& \frac{w}{C}\block{\frac{1}{s_k}\,\frac{2}{N_t^2}\,\im{u_{q g}^*\, H_{k q g}^*\;\mathcal{F}_g\block{\sinh z_{k,\cdot}}}
+	- \frac{1}{2 s_k^3}\mat{\frac{1}{N_t}\sum_t x_{k t}\sinh z_{k t}}\frac{\partial P_{(k,k)}}{\partial \psi_{q g}}},
+\end{eqnarray}
+one FFT for the memoryless factor $\sinh z$ plus the already-computed variance gradient; the second term is required because in the MIMO case the normalisation $s_k$ depends on the phases of all channels through the off-diagonal $H$. Numerically the surrogate is evaluated in shifted-exponential form ($\cosh$ and $\sinh$ scaled by $\m{e}^{-\max_t\abs{z_{k t}}}$) so that large $\beta$ does not overflow.
+
+Large $\beta$ makes the landscape stiff, and starting a high-$\beta$ optimisation from random phases stalls at a mediocre crest. A \emph{$\beta$-continuation} resolves this at negligible cost: optimise at a small $\beta$, then double $\beta$ and warm-start from the previous optimum. Each stage after the first converges in a small fraction of the initial stage's iterations, and the continuation consistently reaches lower crest factors than any single-stage run of whatever budget (see the example below). The staging mirrors classical $p$-norm continuation for Chebyshev-type problems; the surrogate keeps every stage smooth with analytic gradients.
+
+%=============================================================================================================================
 \subsection*{Logical vs physical moments: a Nyquist-tail caveat}
 %=============================================================================================================================
 
@@ -361,6 +382,15 @@ All examples in this section are produced by the reference implementation.\footn
 \includegraphics[width=0.7\textwidth]{figures/convergence.pdf}
 \caption{Loss $\Xi$ versus objective evaluation for the single-channel kurtosis problem (CCSAQ, analytic gradients).}
 \label{fig:convergence}
+\end{figure}
+
+\textbf{Minimum crest factor.} Figure~\ref{fig:crest} shows the crest surrogate of the previous section at work on the flat-spectrum single-channel problem ($N_t = 4096$), for the full band and for a half-band spectrum with a zero upper tail. The $\beta$-continuation (doubling from $5$ to $320$, warm-started) reaches a sampled crest factor of ${\approx}1.14$ for the full band and ${\approx}1.33$ for the half band, consistently across random seeds; direct single-stage runs at high $\beta$ plateau near $1.16$ despite several times the iteration budget. Two observations are worth recording. First, minimum crest and minimum kurtosis are \emph{different} signals: the crest-optimal blocks settle at kurtosis ${\approx}1.17$, visibly above the minimum achievable kurtosis of ${\approx}1.12$ for the same spectrum. Second, the sub-$\sqrt{2}$ full-band value must be read with the logical-versus-physical caveat of the previous section: near-Nyquist content allows the sample grid to sidestep the continuous waveform's peaks, so part of the margin below $\sqrt{2}$ is a discrete-sampling artefact. The half-band figure of $1.33$ is free of this effect and is the number relevant to a physical drive signal; the resulting waveform is a constant-envelope, noise-like block with no visible chirp structure.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/crest_beta.pdf}
+\caption{Crest-factor minimisation with the logcosh surrogate. Left: achieved crest versus surrogate stiffness $\beta$, seed-averaged; warm-started $\beta$-continuation (solid) versus direct single-stage runs (dashed), for the full-band and half-band flat spectra. Right: the resulting full-band minimum-crest block.}
+\label{fig:crest}
 \end{figure}
 
 \textbf{MIMO with measured targets.} A two-channel surrogate record is synthesised as coloured, correlated, non-Gaussian noise: channel $0$ is low-pass weighted and memorylessly distorted (skewed, heavy-tailed); channel $1$ shares a common source with channel $0$ through a resonance at $0.2\,f_s$. Targets are estimated per the previous section: multitaper CSD ($NW = 4$, $K = 7$ tapers, $16$ segments of $1024$ samples) factored per bin by Cholesky, and sample moments for the tuple set $\seq{(0,0,0),\,(1,1,1),\,(0,0,0,0),\,(1,1,1,1),\,(0,0,1,1)}$. Table~\ref{tab:mimo} lists targets and block-averaged achieved values over $32$ independently optimised blocks; Figure~\ref{fig:mimotraces} shows one synthesised block, and Figure~\ref{fig:csd} compares the target CSD with a multitaper estimate over the ensemble of synthesised blocks. PSD, coherence and cross phase are all reproduced. Estimating both sides with the same estimator matters here: per block the off-diagonal cross-spectrum is a single rank-one sample that carries a random phase factor $\m{e}^{\m{i}\mat{\psi_{0f}-\psi_{1f}}}$, so only the ensemble converges -- and at the low coherence of this record the phase scatter of a low-degrees-of-freedom estimate is large, of order $\sqrt{\mat{1/\gamma^2-1}/2N}$.
