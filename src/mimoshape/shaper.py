@@ -35,6 +35,26 @@ class MomentTarget:
 
 
 @dataclass(frozen=True)
+class CrestTarget:
+    """Directly minimised smooth crest surrogate for one channel.
+
+    Adds ``weight * (1/beta) log mean cosh(beta x_k / std)`` to the loss --
+    a smooth stand-in for ``max|x_k|/std`` with bias ``~log(2 Nt)/beta``.
+    For low crest factors run a beta continuation: optimise at a small
+    ``beta``, then warm-start successively doubled betas via
+    ``MimoShaper.make_block(start=...)``.
+    """
+
+    channel: int
+    beta: float = 20.0
+    weight: float = 1.0
+
+    def __post_init__(self):
+        if self.beta <= 0:
+            raise ValueError(f"beta must be positive, got {self.beta}")
+
+
+@dataclass(frozen=True)
 class EndpointTarget:
     """Head value and slope constraint for channel ``k`` (C1 block splicing)."""
 
@@ -56,6 +76,7 @@ class SynthesisProblem:
     H: np.ndarray
     targets: list = field(default_factory=list)
     endpoints: list = field(default_factory=list)
+    crests: list = field(default_factory=list)
 
     def __post_init__(self):
         self.H = np.asarray(self.H, dtype=complex)
@@ -73,6 +94,9 @@ class SynthesisProblem:
         for e in self.endpoints:
             if not 0 <= e.channel < nj:
                 raise ValueError(f"Endpoint channel {e.channel} out of range")
+        for c in self.crests:
+            if not 0 <= c.channel < nj:
+                raise ValueError(f"Crest channel {c.channel} out of range")
 
     @property
     def num_channels(self):
@@ -97,6 +121,16 @@ class SynthesisProblem:
             else:
                 m = moments.normalized_moment(x, t.indices)
             total += 0.5 * t.weight * (m - t.value) ** 2
+
+        for c in self.crests:
+            if want_grad:
+                val, dval = moments.grad_crest_surrogate(
+                    self.H, u, v, x, c.channel, c.beta
+                )
+                grad += c.weight * dval
+            else:
+                val = moments.crest_surrogate(x, c.channel, c.beta)
+            total += c.weight * val
 
         if self.endpoints:
             head = moments.endpoint_value(self.H, u)
@@ -147,6 +181,7 @@ class MimoShaper:
         self.xtol_rel = xtol_rel
         self.rng = np.random.default_rng() if rng is None else rng
         self.last_result = None
+        self.last_phase = None
 
     def _objective(self, flat_phase, flat_grad):
         phase = flat_phase.reshape(self.problem.num_channels, -1)
@@ -160,11 +195,19 @@ class MimoShaper:
             raise nlopt.ForcedStop(1)
         return loss
 
-    def make_block(self):
-        """Optimise from a fresh random phase and return the time signal
-        ``x`` of shape ``(Nj, Nt)``."""
+    def make_block(self, start=None):
+        """Optimise the free phases and return the time signal ``x`` of shape
+        ``(Nj, Nt)``.
+
+        ``start`` warm-starts from given free phases (flat or ``(Nj, Nf-2)``),
+        e.g. ``shaper.last_phase`` from a previous stage of a beta
+        continuation; by default a fresh random phase is drawn.
+        """
         n = self.problem.num_free_phases
-        start = self.rng.uniform(-np.pi, np.pi, n)
+        if start is None:
+            start = self.rng.uniform(-np.pi, np.pi, n)
+        else:
+            start = np.asarray(start, dtype=float).reshape(n)
 
         opt = nlopt.opt(nlopt.LD_CCSAQ, n)
         opt.set_lower_bounds(np.full(n, -np.pi))
@@ -178,4 +221,5 @@ class MimoShaper:
         flat = opt.optimize(start)
         self.last_result = opt.last_optimize_result()
         phase = flat.reshape(self.problem.num_channels, -1)
+        self.last_phase = phase
         return self.problem.signal(phase)

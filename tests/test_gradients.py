@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from mimoshape import moments
-from mimoshape.shaper import MomentTarget, EndpointTarget, SynthesisProblem
+from mimoshape.shaper import MomentTarget, EndpointTarget, CrestTarget, SynthesisProblem
 
 NT = 32
 NF = NT // 2 + 1
@@ -113,6 +113,41 @@ def test_endpoint_value_matches_signal(H, phase):
     np.testing.assert_allclose(moments.endpoint_value(H, u), x[:, 0], atol=1e-12)
 
 
+@pytest.mark.parametrize("k", range(NJ))
+def test_grad_memoryless(H, phase, k):
+    """General memoryless identity checked with g(x) = cos(x)."""
+    u, _, x = moments.uvx(H, phase)
+    analytic = moments.grad_memoryless(H, u, -np.sin(x[k]), k)
+    check(
+        analytic,
+        lambda p: np.mean(np.cos(moments.uvx(H, p)[2][k])),
+        phase,
+    )
+
+
+@pytest.mark.parametrize("k", range(NJ))
+@pytest.mark.parametrize("beta", [2.0, 20.0])
+def test_grad_crest_surrogate(H, phase, k, beta):
+    u, v, x = moments.uvx(H, phase)
+    val, analytic = moments.grad_crest_surrogate(H, u, v, x, k, beta)
+    assert val == pytest.approx(moments.crest_surrogate(x, k, beta))
+    check(
+        analytic,
+        lambda p: moments.crest_surrogate(moments.uvx(H, p)[2], k, beta),
+        phase,
+    )
+
+
+def test_crest_surrogate_bounds(H, phase):
+    """Surrogate approaches max|x|/std from below as beta grows."""
+    _, _, x = moments.uvx(H, phase)
+    crest = np.max(np.abs(x[0])) / np.sqrt(np.mean(x[0] ** 2))
+    lo = moments.crest_surrogate(x, 0, 5.0)
+    hi = moments.crest_surrogate(x, 0, 500.0)
+    assert lo < hi < crest
+    assert hi == pytest.approx(crest, abs=np.log(2 * x.shape[1]) / 500.0)
+
+
 def test_grad_full_loss(H, phase):
     problem = SynthesisProblem(
         H,
@@ -123,6 +158,7 @@ def test_grad_full_loss(H, phase):
             MomentTarget((0, 1, 2), 0.1),
         ],
         endpoints=[EndpointTarget(k) for k in range(NJ)],
+        crests=[CrestTarget(0, beta=10.0, weight=0.7)],
     )
     grad = np.empty_like(phase)
     problem.loss(phase, grad)

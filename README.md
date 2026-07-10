@@ -2,7 +2,8 @@
 
 Phase-domain synthesis of multi-channel (MIMO) signals that match a prescribed
 cross-spectral density (CSD) together with user-selected higher-order diagonal
-and joint moments (skewness, kurtosis, co-skewness, co-kurtosis).
+and joint moments (skewness, kurtosis, co-skewness, co-kurtosis), or
+directly minimised functionals such as a smooth crest-factor surrogate.
 
 The CSD is enforced structurally through a Cholesky factor `H`; the remaining
 phase degrees of freedom are optimised with analytic gradients (CCSAQ from
@@ -36,6 +37,19 @@ problem = SynthesisProblem(
     endpoints=[EndpointTarget(0)],
 )
 x = MimoShaper(problem).make_block()  # shape (1, nt)
+```
+
+Minimum crest factor (peak/std) via the smooth logcosh surrogate with beta
+continuation — see `examples/siso_min_crest.py`:
+
+```python
+from mimoshape import CrestTarget
+
+start = None
+for beta in (5, 10, 20, 40, 80, 160):
+    shaper = MimoShaper(SynthesisProblem(H, crests=[CrestTarget(0, beta=beta)]))
+    x = shaper.make_block(start=start)
+    start = shaper.last_phase
 ```
 
 ## Development

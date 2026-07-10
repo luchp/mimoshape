@@ -67,6 +67,59 @@ def grad_variance(H, u, v, k):
     return (4.0 / nt**2) * np.imag(np.conj(u) * np.conj(H[k]) * v[k])
 
 
+def grad_memoryless(H, u, gprime, k):
+    """Phase gradient of ``Q = mean_t g(x[k, t])`` for a memoryless ``g``.
+
+    ``gprime`` is the pointwise derivative ``g'(x[k, :])``, shape ``(Nt,)``.
+    This is the key identity of the paper with a general pointwise
+    derivative in place of the moment product term:
+    ``dQ/dpsi_qg = (2/Nt^2) im( u* H[k]* F_g[g'(x_k)] )``.
+    """
+    nt = len(gprime)
+    return (2.0 / nt**2) * np.imag(np.conj(u) * np.conj(H[k]) * np.fft.rfft(gprime))
+
+
+def crest_surrogate(x, k, beta):
+    """Smooth crest surrogate ``(1/beta) log mean cosh(beta x_k / std(x_k))``.
+
+    Converges to ``max|x_k|/std(x_k)`` from below as ``beta`` grows, with
+    bias of order ``log(2 Nt)/beta``.  Evaluated in shifted-exponential form
+    so large ``beta`` does not overflow.
+    """
+    z, _, _, cs, a = _crest_terms(x, k, beta)
+    return (a + np.log(cs)) / beta
+
+
+def grad_crest_surrogate(H, u, v, x, k, beta):
+    """Value and phase gradient of the crest surrogate for channel ``k``.
+
+    The normalisation ``std(x_k)`` is phase-dependent in MIMO (off-diagonal
+    ``H`` couples channels), so the chain rule combines the memoryless
+    identity with the variance gradient.  Returns ``(value, gradient)`` with
+    gradient shape ``(Nj, Nf)``.
+    """
+    z, s, ss, cs, a = _crest_terms(x, k, beta)
+    val = (a + np.log(cs)) / beta
+    dq = grad_memoryless(H, u, ss, k)
+    dvar = grad_variance(H, u, v, k)
+    grad = (dq / s - (np.mean(ss * x[k]) / (2.0 * s**3)) * dvar) / cs
+    return val, grad
+
+
+def _crest_terms(x, k, beta):
+    """Shift-stabilised ingredients of the crest surrogate.
+
+    Returns ``(z, s, ss, cs, a)`` with ``z = beta x_k / s``, ``a = max|z|``,
+    ``ss = sinh(z) e^-a`` and ``cs = mean cosh(z) e^-a``.
+    """
+    s = np.sqrt(np.mean(x[k] ** 2))
+    z = beta * x[k] / s
+    a = np.max(np.abs(z))
+    ep = np.exp(z - a)
+    em = np.exp(-z - a)
+    return z, s, 0.5 * (ep - em), 0.5 * np.mean(ep + em), a
+
+
 def normalized_moment(x, indices):
     """Normalised joint moment ``M_i = P_i / prod_a sqrt(P_(i_a,i_a))``."""
     p = raw_moment(x, indices)

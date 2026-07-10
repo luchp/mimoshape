@@ -18,7 +18,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from mimoshape import estimate, moments
-from mimoshape.shaper import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
+from mimoshape.shaper import (
+    MomentTarget,
+    EndpointTarget,
+    CrestTarget,
+    SynthesisProblem,
+    MimoShaper,
+)
 
 PAPER = pathlib.Path(__file__).resolve().parent.parent / "paper"
 FIGURES = PAPER / "figures"
@@ -215,10 +221,76 @@ def fig_and_table_mimo():
     plt.close(fig)
 
 
+def fig_crest():
+    """Crest minimisation: beta continuation vs direct high-beta starts.
+
+    Left: achieved crest factor vs surrogate stiffness beta, for a full flat
+    spectrum and a half-band (zero tail) spectrum, seed-averaged.  Right: the
+    final full-spectrum minimum-crest block.
+    """
+    nt = 2**12
+    betas = [5, 10, 20, 40, 80, 160, 320]
+    seeds = [0, 1, 2]
+
+    def crest_of(x):
+        return np.max(np.abs(x)) / np.sqrt(np.mean(x**2))
+
+    def band_H(band):
+        nf = nt // 2 + 1
+        H = np.zeros((1, 1, nf), dtype=complex)
+        H[0, 0, 1 : int(round(band * (nf - 1)))] = 1.0
+        return H
+
+    def optimise(H, beta, start):
+        problem = SynthesisProblem(H, crests=[CrestTarget(0, beta=beta)])
+        shaper = MimoShaper(problem, max_time=30, ftol_rel=1e-7, xtol_rel=1e-9)
+        x = shaper.make_block(start=start)
+        return crest_of(x[0]), shaper.last_phase, x[0]
+
+    fig, (ax_beta, ax_block) = plt.subplots(
+        1, 2, figsize=(9, 3.4), gridspec_kw={"width_ratios": [1, 1.4]}
+    )
+    best_block = None
+    for band, label, style in [(1.0, "full spectrum", "C0"), (0.5, "half band", "C1")]:
+        H = band_H(band)
+        n = nt // 2 - 1
+        direct = np.empty((len(seeds), len(betas)))
+        continued = np.empty_like(direct)
+        for i, seed in enumerate(seeds):
+            start0 = np.random.default_rng(seed).uniform(-np.pi, np.pi, n)
+            phase = start0
+            for j, beta in enumerate(betas):
+                direct[i, j], _, _ = optimise(H, beta, start0)
+                continued[i, j], phase, block = optimise(H, beta, phase)
+            if band == 1.0 and i == 0:
+                best_block = block
+        ax_beta.semilogx(
+            betas, direct.mean(axis=0), style + "o--", label=f"{label}, direct"
+        )
+        ax_beta.semilogx(
+            betas, continued.mean(axis=0), style + "s-", label=f"{label}, continued"
+        )
+    ax_beta.axhline(np.sqrt(2), color="k", linewidth=0.6, linestyle=":")
+    ax_beta.annotate(r"sine $\sqrt{2}$", (betas[0], np.sqrt(2)), fontsize=8,
+                     textcoords="offset points", xytext=(2, 3))
+    ax_beta.set_xlabel(r"surrogate stiffness $\beta$")
+    ax_beta.set_ylabel(r"crest factor $\max|x|/\sigma$")
+    ax_beta.legend(fontsize=8)
+    ax_beta.grid(alpha=0.4, which="both")
+
+    ax_block.plot(best_block, linewidth=0.4)
+    ax_block.set_xlabel("sample")
+    ax_block.set_ylabel(f"crest {crest_of(best_block):.3f}")
+    ax_block.grid(alpha=0.4)
+    fig.tight_layout()
+    fig.savefig(FIGURES / "crest_beta.pdf")
+    plt.close(fig)
+
+
 def main():
     FIGURES.mkdir(parents=True, exist_ok=True)
     TABLES.mkdir(parents=True, exist_ok=True)
-    for job in [fig_siso_block, fig_convergence, fig_and_table_mimo]:
+    for job in [fig_siso_block, fig_convergence, fig_crest, fig_and_table_mimo]:
         t0 = time.time()
         job()
         print(f"{job.__name__}: {time.time() - t0:.1f}s")
