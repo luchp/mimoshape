@@ -6,7 +6,7 @@ Run with:  uv run --extra examples python examples/siso_kurtosis.py
 import numpy as np
 import matplotlib.pyplot as plt
 
-from synthsig import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
+from mimoshape import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
 
 
 def stats(x):

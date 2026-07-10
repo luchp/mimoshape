@@ -8,8 +8,8 @@ moments, endpoint value/slope, and the assembled loss.
 import numpy as np
 import pytest
 
-from synthsig import moments
-from synthsig.shaper import MomentTarget, EndpointTarget, SynthesisProblem
+from mimoshape import moments
+from mimoshape.shaper import MomentTarget, EndpointTarget, SynthesisProblem
 
 NT = 32
 NF = NT // 2 + 1

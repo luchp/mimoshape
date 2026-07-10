@@ -6,8 +6,8 @@ Run with:  uv run --extra examples python examples/mimo_from_record.py
 import numpy as np
 import matplotlib.pyplot as plt
 
-from synthsig import estimate, moments
-from synthsig.shaper import SynthesisProblem, MimoShaper
+from mimoshape import estimate, moments
+from mimoshape.shaper import SynthesisProblem, MimoShaper
 
 
 def make_record(rng, n):

@@ -39,8 +39,8 @@
 \newcommand{\seq}[1]{\left<#1\right>}
 \newcommand{\mat}[1]{\left(#1\right)}
 
-\newcommand{\re}[1]{\mathrm{re}\left(#1\right)}
-\newcommand{\im}[1]{\mathrm{im}\left(#1\right)}
+\newcommand{\re}[1]{\operatorname{Re}\left(#1\right)}
+\newcommand{\im}[1]{\operatorname{Im}\left(#1\right)}
 
 \newcommand{\m}[1]{\mathrm{#1}}
 
@@ -140,9 +140,9 @@ The result signal in the time domain is the channel wise inverse Fourier transfo
 
 \begin{eqnarray}
 	H_{k j f} &=& h_{k j f} \: \m{e}^{\m{i} \theta_{k j f}} \\
-	u_{k f} &=& \m{e}^{\m{i} \phi_{k f}} \\
-	v_{k f} &=& \sum_{j=0}^{N_j-1} H_{k j f} \; \m{e}^{\m{i} \phi_{j f}} 
-			\;=\; \sum_{j=0}^{N_j-1} h_{k j f} \: \m{e}^{\m{i} \theta_{k j f}} \:\; \m{e}^{\m{i} \phi_{j f}} \\
+	u_{k f} &=& \m{e}^{\m{i} \psi_{k f}} \\
+	v_{k f} &=& \sum_{j=0}^{N_j-1} H_{k j f} \; \m{e}^{\m{i} \psi_{j f}} 
+			\;=\; \sum_{j=0}^{N_j-1} h_{k j f} \: \m{e}^{\m{i} \theta_{k j f}} \:\; \m{e}^{\m{i} \psi_{j f}} \\
 	\mathbf{x_k} &=& \mathcal{F}^{\m{-1}} \mat{\mathbf{v_k}}
 \end{eqnarray}
 Assume further that $\mathbf{x}$ has $N_t$ samples. We can then expand $x_t$ as:

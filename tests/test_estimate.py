@@ -7,8 +7,8 @@ synthesise a block, and verify CSD structure and moments are reproduced.
 import numpy as np
 import pytest
 
-from synthsig import estimate, moments
-from synthsig.shaper import SynthesisProblem, MimoShaper
+from mimoshape import estimate, moments
+from mimoshape.shaper import SynthesisProblem, MimoShaper
 
 
 @pytest.fixture

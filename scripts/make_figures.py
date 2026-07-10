@@ -17,8 +17,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from synthsig import estimate, moments
-from synthsig.shaper import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
+from mimoshape import estimate, moments
+from mimoshape.shaper import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
 
 PAPER = pathlib.Path(__file__).resolve().parent.parent / "paper"
 FIGURES = PAPER / "figures"

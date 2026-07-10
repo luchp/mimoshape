@@ -1,4 +1,4 @@
-"""synthsig -- phase-domain synthesis of MIMO signals with target CSD and moments."""
+"""mimoshape -- phase-domain synthesis of MIMO signals with target CSD and moments."""
 
 from .shaper import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
 from . import moments

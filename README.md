@@ -1,4 +1,4 @@
-# synthsig
+# mimoshape
 
 Phase-domain synthesis of multi-channel (MIMO) signals that match a prescribed
 cross-spectral density (CSD) together with user-selected higher-order diagonal
@@ -10,9 +10,9 @@ NLopt). See `paper/sss.tex` for the full derivation.
 
 ## Layout
 
-- `src/synthsig/moments.py` — pure numerics: signals, moments, analytic gradients
-- `src/synthsig/shaper.py` — target set, loss assembly, NLopt wiring
-- `src/synthsig/estimate.py` — targets from measured records: multitaper CSD → Cholesky `H`, sample moments
+- `src/mimoshape/moments.py` — pure numerics: signals, moments, analytic gradients
+- `src/mimoshape/shaper.py` — target set, loss assembly, NLopt wiring
+- `src/mimoshape/estimate.py` — targets from measured records: multitaper CSD → Cholesky `H`, sample moments
 - `tests/` — analytic-vs-numerical gradient checks
 - `examples/` — runnable demos
 - `scripts/make_figures.py` — regenerates every figure and table in the paper
@@ -23,7 +23,7 @@ NLopt). See `paper/sss.tex` for the full derivation.
 
 ```python
 import numpy as np
-from synthsig import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
+from mimoshape import MomentTarget, EndpointTarget, SynthesisProblem, MimoShaper
 
 nt = 4096
 nf = nt // 2 + 1
