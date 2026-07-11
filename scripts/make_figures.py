@@ -106,29 +106,121 @@ def fig_siso_block():
 
 
 def fig_convergence():
-    """Loss vs objective evaluation for the SISO kurtosis problem."""
-    rng = np.random.default_rng(12)
-    problem = flat_siso_problem(2**12, kurtosis=5.0)
-    losses = []
+    """Loss vs objective evaluation: feasible vs infeasible kurtosis target.
 
-    def record_loss(loss):
-        losses.append(loss)
-        return False
-
-    shaper = MimoShaper(
-        problem, progress=record_loss,
-        max_time=60, stop_loss=1e-10, ftol_rel=1e-12, xtol_rel=1e-12, rng=rng,
-    )
-    shaper.make_block()
-
+    The infeasible target (kurtosis 1.0, below the achievable floor) shows
+    CCSAQ descending smoothly onto the feasibility boundary; the residual
+    loss measures the infeasibility gap.
+    """
     fig, ax = plt.subplots(figsize=(6, 3.2))
-    ax.semilogy(losses, linewidth=0.8)
+    for kurtosis, style, label in [
+        (5.0, "C0", "feasible target (kurtosis 5.0)"),
+        (1.0, "C1", "infeasible target (kurtosis 1.0)"),
+    ]:
+        rng = np.random.default_rng(12)
+        problem = flat_siso_problem(2**12, kurtosis=kurtosis)
+        losses = []
+
+        def record_loss(loss):
+            losses.append(loss)
+            return False
+
+        shaper = MimoShaper(
+            problem, progress=record_loss,
+            max_time=15, stop_loss=1e-10, ftol_rel=1e-12, xtol_rel=1e-12, rng=rng,
+        )
+        shaper.make_block()
+        ax.semilogy(losses, style, linewidth=0.8, label=label)
     ax.set_xlabel("objective evaluation")
     ax.set_ylabel(r"loss $\Xi$")
+    ax.legend(fontsize=8)
     ax.grid(alpha=0.4, which="both")
     fig.tight_layout()
     fig.savefig(FIGURES / "convergence.pdf")
     plt.close(fig)
+
+
+def fig_restarts():
+    """Distribution of the final loss over many random restarts.
+
+    Checks for local-minimum trapping of the phase optimisation: the SISO
+    kurtosis problem is re-optimised from 64 independent random starts.
+    """
+    problem = flat_siso_problem(2**12, kurtosis=5.0)
+    finals = []
+    for seed in range(64):
+        shaper = MimoShaper(
+            problem, max_time=5, stop_loss=1e-10, ftol_rel=1e-9,
+            rng=np.random.default_rng(100 + seed),
+        )
+        shaper.make_block()
+        finals.append(problem.loss(shaper.last_phase))
+    finals = np.array(finals)
+
+    fig, ax = plt.subplots(figsize=(6, 2.8))
+    ax.hist(np.log10(finals), bins=24, color="C0", alpha=0.8)
+    ax.set_xlabel(r"$\log_{10}$ final loss $\Xi$")
+    ax.set_ylabel("restarts")
+    ax.grid(alpha=0.4)
+    fig.tight_layout()
+    fig.savefig(FIGURES / "restarts.pdf")
+    plt.close(fig)
+    (TABLES / "restart_stats.tex").write_text(
+        f"median $10^{{{np.median(np.log10(finals)):.1f}}}$, "
+        f"worst $10^{{{np.max(np.log10(finals)):.1f}}}$\n"
+    )
+
+
+def table_timing():
+    """Wall-clock cost per block for several sizes and objective mixes."""
+
+    def run(name, problem, **kwargs):
+        evals = [0]
+
+        def count(loss):
+            evals[0] += 1
+            return False
+
+        shaper = MimoShaper(
+            problem, progress=count, max_time=60, stop_loss=1e-10,
+            rng=np.random.default_rng(7), **kwargs,
+        )
+        t0 = time.perf_counter()
+        shaper.make_block()
+        dt = time.perf_counter() - t0
+        nj, _, nf = problem.H.shape
+        nt = 2 * (nf - 1)
+        return (
+            f"{name} & {nj} & {nt} & {problem.num_free_phases} & "
+            f"{evals[0]} & {dt:.2f} & {1e3 * dt / evals[0]:.2f} \\\\"
+        )
+
+    rows = [
+        run(f"SISO skew+kurt+endpoint", flat_siso_problem(nt, kurtosis=5.0))
+        for nt in [2**10, 2**12, 2**14]
+    ]
+    nt = 2**12
+    nf = nt // 2 + 1
+    H = np.zeros((1, 1, nf), dtype=complex)
+    H[0, 0, 1 : nf // 2] = 1.0
+    rows.append(
+        run(
+            "SISO crest ($\\beta=80$)",
+            SynthesisProblem(H, crests=[CrestTarget(0, beta=80)]),
+            ftol_rel=1e-7,
+        )
+    )
+    problem, _ = mimo_problem(np.random.default_rng(13))
+    rows.append(run("MIMO 2ch, CSD + 5 (cross-)moments", problem))
+
+    lines = [
+        r"\begin{tabular}{l r r r r r r}",
+        r"problem & $N_j$ & $N_t$ & phases & evals & s/block & ms/eval \\",
+        r"\hline",
+        *rows,
+        r"\end{tabular}",
+    ]
+    (TABLES / "timing.tex").write_text("\n".join(lines) + "\n")
 
 
 def mimo_blocks(problem, rng, num_blocks):
@@ -217,6 +309,7 @@ def fig_and_table_mimo():
     for ax in axes:
         ax.grid(alpha=0.4)
     fig.tight_layout()
+    fig.subplots_adjust(hspace=0.35)  # review: keep tick labels legible
     fig.savefig(FIGURES / "csd_match.pdf")
     plt.close(fig)
 
@@ -305,7 +398,14 @@ def fig_crest():
 def main():
     FIGURES.mkdir(parents=True, exist_ok=True)
     TABLES.mkdir(parents=True, exist_ok=True)
-    for job in [fig_siso_block, fig_convergence, fig_crest, fig_and_table_mimo]:
+    for job in [
+        fig_siso_block,
+        fig_convergence,
+        fig_restarts,
+        table_timing,
+        fig_crest,
+        fig_and_table_mimo,
+    ]:
         t0 = time.time()
         job()
         print(f"{job.__name__}: {time.time() - t0:.1f}s")

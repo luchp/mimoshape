@@ -68,7 +68,8 @@
 \begin{center}
 \begin{tabular}{c}
     \Huge{Synthetic Signal Shaping} \\ \\
-    \Large{Analytic-gradient phase optimization for target moments and cross-spectral density} \\ \\
+    \Large{Analytic-gradient phase optimization for a target cross-spectral density} \\
+    \Large{and higher-order moments and cross-moments} \\ \\
     \large{Luc Holtkamp} \\
     \normalsize{SenseMagic, Netherlands} \\
     \normalsize{\texttt{luc@sensemagic.nl}} \\ \\
@@ -89,7 +90,7 @@
 %=============================================================================================================================
 \section*{Abstract}
 %=============================================================================================================================
-We present a phase-domain method for generating multi-input synthetic vibration signals that match a prescribed cross-spectral density (CSD) together with a user-selected set of higher-order diagonal \emph{and joint} moments. The CSD is enforced structurally by pre-multiplying random-phase, unit-modulus, frequency-domain signals with a Cholesky factor of the target CSD, following the frequency-domain synthesis of Shinozuka and Jan~\cite{shinozuka1972digital} and its extensions to partially coherent and non-Gaussian MIMO outputs~\cite{smallwood1993coherent,smallwood_nongaussian,cui2011matrix}. The remaining phase degrees of freedom are used to shape the channelwise moments -- extending the IFFT phase-manipulation idea of Steinwolf~\cite{steinwolf2011ifft,steinwolf2011twr,steinwolf_book_ngaussian} -- and, crucially, also the joint cross-moments (co-skewness, co-kurtosis) which govern coincident-peak excursions and hence multi-axial fatigue damage~\cite{saathoff2006synthetic}. Closed-form analytic gradients of both diagonal and cross moments with respect to the free phases are derived; each cross-moment target of order $m$ (the number of channel indices in the moment) adds at most $m$ FFTs per gradient evaluation, independent of the number of channels. The resulting problem is smooth and is solved with an analytic-gradient sequential-approximation method (CCSAQ~\cite{svanberg2002ccsaq}) from the NLopt library~\cite{johnson_nlopt}. When the target statistics are estimated from measured multi-axial records the targets are realisable by construction, which we argue is the natural regime for the method. Because every target gradient reduces to the same pattern -- one Fourier transform of the pointwise derivative of a memoryless functional, projected through the conjugated unit-modulus source spectrum $u^*$ and the conjugated frequency response $H^*$ -- the MIMO synthesiser inherits the algorithmic simplicity of the single-channel case, and the framework accommodates any smooth memoryless target functional (moments, cross-moments, endpoint values, absolute-value moments, coincident-excursion probabilities, fatigue-dosage surrogates) with no new machinery.
+We present a phase-domain method for generating multi-input synthetic vibration signals that match a prescribed cross-spectral density (CSD) together with a user-selected set of higher-order diagonal \emph{and joint} moments. The CSD is enforced structurally by pre-multiplying random-phase, unit-modulus, frequency-domain signals with a Cholesky factor of the target CSD, following the frequency-domain synthesis of Shinozuka and Jan~\cite{shinozuka1972digital} and its extensions to partially coherent and non-Gaussian MIMO outputs~\cite{smallwood1993coherent,smallwood_nongaussian,cui2011matrix}. The remaining phase degrees of freedom are used to shape the channelwise moments -- extending the IFFT phase-manipulation idea of Steinwolf~\cite{steinwolf2011ifft,steinwolf2011twr,steinwolf_book_ngaussian} -- and, crucially, also the joint cross-moments (co-skewness, co-kurtosis) which govern coincident-peak excursions and hence multi-axial fatigue damage~\cite{saathoff2006synthetic}. Closed-form analytic gradients of both diagonal and cross moments with respect to the free phases are derived; each cross-moment target of order $m$ (the number of channel indices in the moment) adds at most $m$ FFTs per gradient evaluation, independent of the number of channels. The resulting problem is smooth and is solved with an analytic-gradient sequential-approximation method (CCSAQ~\cite{svanberg2002ccsaq}) from the NLopt library~\cite{johnson_nlopt}. When the target statistics are estimated from measured multi-axial records the targets are realisable by construction, which we argue is the natural regime for the method. Because every target gradient reduces to the same pattern -- one Fourier transform of the pointwise derivative of a memoryless functional, projected through the conjugated unit-modulus source spectrum $u^*$ and the conjugated frequency response $H^*$ -- the MIMO synthesiser inherits the algorithmic simplicity of the single-channel case, and the framework accommodates any smooth memoryless target functional (moments, cross-moments, endpoint values, absolute-value moments, coincident-excursion probabilities, fatigue-dosage surrogates) with no new machinery. A complete, unit-tested reference implementation -- including Slepian multitaper CSD estimation and analytic-gradient verification against central differences -- is open-sourced at \url{https://github.com/luchp/mimoshape}; every figure and table in this paper is regenerated from it with fixed seeds.
 
 \pagestyle{fancy}
 \lhead{ \includegraphics[height=12mm]{SenseMagic.jpg} }
@@ -362,6 +363,11 @@ The PSD property is important here: Cholesky factorisation $\mathbf{G}\mat{f} = 
 The loss $\Xi\mat{\psi}$ is smooth in the free phases $\psi_{q g}$ and its analytic gradient is available at the cost of a handful of FFTs per iteration (see the cross-moment cost analysis above). This makes the problem well-suited to gradient-based sequential-approximation methods. We use CCSAQ~\cite{svanberg2002ccsaq}, the analytic-gradient conservative convex separable approximation of Svanberg, as implemented in the NLopt library~\cite{johnson_nlopt}; earlier experiments with the derivative-free COBYLA~\cite{powell1994cobyla} confirmed convergence but at markedly higher iteration counts. The phase parameters are unbounded periodic, and no explicit constraints are required beyond the CSD-derived spectral structure that is already enforced through $\mathbf{H}$.
 
 %=============================================================================================================================
+\subsection*{Software architecture and verification}
+%=============================================================================================================================
+The reference implementation\footnote{\url{https://github.com/luchp/mimoshape}} is a small pure-NumPy package: one module of stateless numerics (moments, cross-moments, crest surrogate, and their analytic gradients) and one module that assembles them into a synthesis problem and drives the NLopt optimiser. Every analytic gradient in this paper -- including the cross-moment and crest-surrogate derivatives -- is verified by the unit-test suite against central-difference numerical gradients on randomised problems (random spectra, channel counts, moment tuples and surrogate stiffnesses), and the suite runs on every change. Every figure and table in this paper is regenerated by a single script with fixed random seeds.
+
+%=============================================================================================================================
 \section*{Examples}
 %=============================================================================================================================
 All examples in this section are produced by the reference implementation.\footnote{Every figure and table is regenerated, with fixed random seeds, by a single script (\texttt{scripts/make\_figures.py}) in the accompanying repository; the analytic gradients are verified against central-difference numerical gradients by the unit-test suite.}
@@ -375,14 +381,32 @@ All examples in this section are produced by the reference implementation.\footn
 \label{fig:siso}
 \end{figure}
 
-\textbf{Convergence.} Figure~\ref{fig:convergence} shows the loss trajectory for the single-channel problem above, run to a stop value of $10^{-10}$: roughly $100$ objective evaluations, each costing a handful of FFTs. The spikes are rejected trial steps of the conservative CCSAQ outer loop.
+\textbf{Convergence and infeasible targets.} Figure~\ref{fig:convergence} shows loss trajectories for the single-channel problem above. With the feasible target (kurtosis $5$) the optimiser reaches the stop value of $10^{-10}$ in roughly $100$ objective evaluations, each costing a handful of FFTs; the spikes are rejected trial steps of the conservative CCSAQ outer loop. The second trajectory requests an \emph{infeasible} target -- kurtosis $1.0$, below the ${\approx}1.12$ floor achievable for this spectrum -- and shows no gradient stagnation or erratic behaviour: the loss descends smoothly onto a plateau at the feasibility boundary, and the residual loss directly measures how far the requested target lies outside the achievable set. This makes an infeasible request cheap to detect in practice, complementing the random-phase realisability check of the target-estimation section.
 
 \begin{figure}[htb]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/convergence.pdf}
-\caption{Loss $\Xi$ versus objective evaluation for the single-channel kurtosis problem (CCSAQ, analytic gradients).}
+\caption{Loss $\Xi$ versus objective evaluation for the single-channel kurtosis problem (CCSAQ, analytic gradients): a feasible target converges to the stop value; an infeasible target settles smoothly onto the feasibility gap.}
 \label{fig:convergence}
 \end{figure}
+
+\textbf{Seed sensitivity.} Phase-domain optimisers are sometimes suspected of trapping in poor local minima seeded by the initial random phases. Figure~\ref{fig:restarts} shows the distribution of the final loss for the same feasible problem over $64$ independent random restarts: \input{tables/restart_stats.tex}\unskip. All restarts land many orders of magnitude below any practically relevant tolerance; with thousands of free phases and a handful of scalar targets the problem is massively underdetermined, and the optimiser has too much room to get stuck.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/restarts.pdf}
+\caption{Final loss over $64$ independent random restarts of the single-channel kurtosis problem ($N_t = 4096$, stop value $10^{-10}$, budget $5\,$s per restart).}
+\label{fig:restarts}
+\end{figure}
+
+\textbf{Wall-clock cost.} Table~\ref{tab:timing} reports single-core wall-clock times per optimised block on an ordinary desktop workstation. Moment-and-endpoint problems cost well under $0.1\,$s per block even at $N_t = 16384$; the evaluation cost scales with the FFT length as expected, while the evaluation \emph{count} is set by the objective mix, not the block size. The crest surrogate is the expensive case -- not per evaluation, but because a stiff surrogate needs thousands of evaluations per continuation stage. Block synthesis is comfortably real-time for streaming test-rig use.
+
+\begin{table}[htb]
+\centering
+\input{tables/timing.tex}
+\caption{Wall-clock cost per optimised block (single core). ``Evals'' counts objective/gradient evaluations to the stop criterion of the corresponding example.}
+\label{tab:timing}
+\end{table}
 
 \textbf{Minimum crest factor.} Figure~\ref{fig:crest} shows the crest surrogate of the previous section at work on the flat-spectrum single-channel problem ($N_t = 4096$), for the full band and for a half-band spectrum with a zero upper tail. The $\beta$-continuation (doubling from $5$ to $320$, warm-started) reaches a sampled crest factor of ${\approx}1.14$ for the full band and ${\approx}1.33$ for the half band, consistently across random seeds; direct single-stage runs at high $\beta$ plateau near $1.16$ despite several times the iteration budget. Minimum crest and minimum kurtosis are \emph{different} signals: the crest-optimal blocks settle at kurtosis ${\approx}1.17$, visibly above the minimum achievable kurtosis of ${\approx}1.12$ for the same spectrum.
 
