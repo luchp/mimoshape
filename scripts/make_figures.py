@@ -318,10 +318,11 @@ def fig_crest():
     """Crest minimisation: beta continuation vs direct high-beta starts.
 
     Left: achieved crest factor vs surrogate stiffness beta, for a full flat
-    spectrum and a half-band (zero tail) spectrum, seed-averaged, including
-    the physical crest of the continued optimum on an 8x oversampled
-    reconstruction.  Right: the final half-band minimum-crest block (the
-    full-band optimum hides its physical peaks between the samples).
+    spectrum, a half-band (zero tail) spectrum and a half band with a 10%
+    raised-cosine edge taper, seed-averaged, including the physical crest of
+    the continued optimum on an 8x oversampled reconstruction.  Right: the
+    final tapered minimum-crest block (the full-band optimum hides its
+    physical peaks between the samples).
     """
     nt = 2**12
     betas = [5, 10, 20, 40, 80, 160, 320]
@@ -330,10 +331,16 @@ def fig_crest():
     def crest_of(x):
         return np.max(np.abs(x)) / np.sqrt(np.mean(x**2))
 
-    def band_H(band):
+    def band_H(band, taper=0.0):
+        """Flat band with optional raised-cosine roll-off (fraction of Nyquist)."""
         nf = nt // 2 + 1
+        edge = int(round(band * (nf - 1)))
         H = np.zeros((1, 1, nf), dtype=complex)
-        H[0, 0, 1 : int(round(band * (nf - 1)))] = 1.0
+        H[0, 0, 1:edge] = 1.0
+        if taper > 0:
+            w = int(round(taper * (nf - 1)))
+            k = np.arange(w)
+            H[0, 0, edge - w : edge] = 0.5 * (1 + np.cos(np.pi * k / w))
         return H
 
     def optimise(H, beta, start):
@@ -346,8 +353,13 @@ def fig_crest():
         1, 2, figsize=(9, 3.4), gridspec_kw={"width_ratios": [1, 1.4]}
     )
     best_block = None
-    for band, label, style in [(1.0, "full spectrum", "C0"), (0.5, "half band", "C1")]:
-        H = band_H(band)
+    cases = [
+        (1.0, 0.0, "full spectrum", "C0"),
+        (0.5, 0.0, "half band", "C1"),
+        (0.5, 0.10, "half band, 10% taper", "C2"),
+    ]
+    for band, taper, label, style in cases:
+        H = band_H(band, taper)
         n = nt // 2 - 1
         direct = np.empty((len(seeds), len(betas)))
         continued = np.empty_like(direct)
@@ -361,11 +373,12 @@ def fig_crest():
                 x, phase = optimise(H, beta, phase)
                 continued[i, j] = crest_of(x[0])
                 physical[i, j] = moments.oversampled_crest(x, 0)
-            if band == 0.5 and i == 0:
+            if taper > 0 and i == 0:
                 best_block = x[0]
-        ax_beta.semilogx(
-            betas, direct.mean(axis=0), style + "o--", label=f"{label}, direct"
-        )
+        if taper == 0:
+            ax_beta.semilogx(
+                betas, direct.mean(axis=0), style + "o--", label=f"{label}, direct"
+            )
         ax_beta.semilogx(
             betas, continued.mean(axis=0), style + "s-", label=f"{label}, continued"
         )
