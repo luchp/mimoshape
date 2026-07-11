@@ -1,9 +1,11 @@
 """SISO demo: minimum crest factor via logcosh surrogate with beta continuation.
 
-Optimises a flat-spectrum block for minimum peak/std by minimising the smooth
-surrogate (1/beta) log mean cosh(beta x/std), doubling beta each stage and
-warm-starting from the previous optimum.  The result is a constant-envelope,
-noise-like waveform (no chirp structure appears in the spectrogram).
+Optimises a half-band flat-spectrum block (zero upper tail -- with full-band
+spectra the optimiser hides the physical peaks between the samples!) for
+minimum peak/std by minimising the smooth surrogate
+(1/beta) log mean cosh(beta x/std), doubling beta each stage and warm-starting
+from the previous optimum.  The result is a constant-envelope, noise-like
+waveform (no chirp structure appears in the spectrogram).
 
 Run with:  uv run --extra examples python examples/siso_min_crest.py
 """
@@ -11,7 +13,7 @@ Run with:  uv run --extra examples python examples/siso_min_crest.py
 import numpy as np
 import matplotlib.pyplot as plt
 
-from mimoshape import CrestTarget, SynthesisProblem, MimoShaper
+from mimoshape import CrestTarget, SynthesisProblem, MimoShaper, moments
 
 
 def crest(x):
@@ -22,7 +24,7 @@ def main():
     nt = 2**12
     nf = nt // 2 + 1
     H = np.zeros((1, 1, nf), dtype=complex)
-    H[0, 0, 1:-1] = 1.0
+    H[0, 0, 1 : nf // 2] = 1.0  # half band: zero upper tail
 
     rng = np.random.default_rng(0)
     start = None
@@ -31,11 +33,17 @@ def main():
         shaper = MimoShaper(problem, max_time=20, ftol_rel=1e-7, rng=rng)
         x = shaper.make_block(start=start)
         start = shaper.last_phase
-        print(f"beta {beta:>4d}: crest {crest(x[0]):.3f}")
+        print(
+            f"beta {beta:>4d}: sampled crest {crest(x[0]):.3f}, "
+            f"physical crest (8x oversampled) {moments.oversampled_crest(x, 0):.3f}"
+        )
 
     fig, axes = plt.subplots(2, 1, figsize=(8, 5))
     axes[0].plot(x[0], linewidth=0.4)
-    axes[0].set_title(f"minimum-crest block, crest = {crest(x[0]):.3f} (sine = 1.414)")
+    axes[0].set_title(
+        f"minimum-crest half-band block, physical crest = "
+        f"{moments.oversampled_crest(x, 0):.3f} (sine = 1.414)"
+    )
     axes[0].set_xlabel("sample")
     axes[0].grid(alpha=0.4)
     axes[1].specgram(x[0], NFFT=256, Fs=1.0, noverlap=192)

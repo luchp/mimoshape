@@ -174,6 +174,22 @@ def grad_endpoint_slope(H, u, k):
     return -(2.0 / nt) * omega * np.real(H[k] * u)
 
 
+def oversampled_crest(x, k, factor=8):
+    """Crest factor of channel ``k`` on a ``factor``-times zero-padded
+    reconstruction -- a proxy for the physical (continuous) DAC output.
+
+    The sampled crest ``max|x_k|/std`` is a lower bound that near-Nyquist
+    content can undercut dramatically (peaks between samples); this measures
+    the crest the test article actually sees.
+    """
+    nt = x.shape[1]
+    v = np.fft.rfft(x[k])
+    vp = np.zeros(factor * nt // 2 + 1, dtype=complex)
+    vp[: len(v)] = v
+    xu = np.fft.irfft(vp, n=factor * nt) * factor
+    return np.max(np.abs(xu)) / np.sqrt(np.mean(xu**2))
+
+
 def _index_counts(indices):
     """Distinct channels of a tuple with multiplicities, preserving order."""
     seen = {}

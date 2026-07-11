@@ -225,8 +225,10 @@ def fig_crest():
     """Crest minimisation: beta continuation vs direct high-beta starts.
 
     Left: achieved crest factor vs surrogate stiffness beta, for a full flat
-    spectrum and a half-band (zero tail) spectrum, seed-averaged.  Right: the
-    final full-spectrum minimum-crest block.
+    spectrum and a half-band (zero tail) spectrum, seed-averaged, including
+    the physical crest of the continued optimum on an 8x oversampled
+    reconstruction.  Right: the final half-band minimum-crest block (the
+    full-band optimum hides its physical peaks between the samples).
     """
     nt = 2**12
     betas = [5, 10, 20, 40, 80, 160, 320]
@@ -245,7 +247,7 @@ def fig_crest():
         problem = SynthesisProblem(H, crests=[CrestTarget(0, beta=beta)])
         shaper = MimoShaper(problem, max_time=30, ftol_rel=1e-7, xtol_rel=1e-9)
         x = shaper.make_block(start=start)
-        return crest_of(x[0]), shaper.last_phase, x[0]
+        return x, shaper.last_phase
 
     fig, (ax_beta, ax_block) = plt.subplots(
         1, 2, figsize=(9, 3.4), gridspec_kw={"width_ratios": [1, 1.4]}
@@ -256,31 +258,44 @@ def fig_crest():
         n = nt // 2 - 1
         direct = np.empty((len(seeds), len(betas)))
         continued = np.empty_like(direct)
+        physical = np.empty_like(direct)
         for i, seed in enumerate(seeds):
             start0 = np.random.default_rng(seed).uniform(-np.pi, np.pi, n)
             phase = start0
             for j, beta in enumerate(betas):
-                direct[i, j], _, _ = optimise(H, beta, start0)
-                continued[i, j], phase, block = optimise(H, beta, phase)
-            if band == 1.0 and i == 0:
-                best_block = block
+                x, _ = optimise(H, beta, start0)
+                direct[i, j] = crest_of(x[0])
+                x, phase = optimise(H, beta, phase)
+                continued[i, j] = crest_of(x[0])
+                physical[i, j] = moments.oversampled_crest(x, 0)
+            if band == 0.5 and i == 0:
+                best_block = x[0]
         ax_beta.semilogx(
             betas, direct.mean(axis=0), style + "o--", label=f"{label}, direct"
         )
         ax_beta.semilogx(
             betas, continued.mean(axis=0), style + "s-", label=f"{label}, continued"
         )
+        ax_beta.semilogx(
+            betas,
+            physical.mean(axis=0),
+            style + ":",
+            label=f"{label}, physical (8x)",
+        )
     ax_beta.axhline(np.sqrt(2), color="k", linewidth=0.6, linestyle=":")
     ax_beta.annotate(r"sine $\sqrt{2}$", (betas[0], np.sqrt(2)), fontsize=8,
                      textcoords="offset points", xytext=(2, 3))
     ax_beta.set_xlabel(r"surrogate stiffness $\beta$")
     ax_beta.set_ylabel(r"crest factor $\max|x|/\sigma$")
-    ax_beta.legend(fontsize=8)
+    ax_beta.legend(fontsize=7)
     ax_beta.grid(alpha=0.4, which="both")
 
     ax_block.plot(best_block, linewidth=0.4)
     ax_block.set_xlabel("sample")
-    ax_block.set_ylabel(f"crest {crest_of(best_block):.3f}")
+    ax_block.set_ylabel(
+        f"sampled crest {crest_of(best_block):.3f}\n"
+        f"physical crest {moments.oversampled_crest(best_block[None, :], 0):.3f}"
+    )
     ax_block.grid(alpha=0.4)
     fig.tight_layout()
     fig.savefig(FIGURES / "crest_beta.pdf")

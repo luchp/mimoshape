@@ -148,6 +148,23 @@ def test_crest_surrogate_bounds(H, phase):
     assert hi == pytest.approx(crest, abs=np.log(2 * x.shape[1]) / 500.0)
 
 
+def test_oversampled_crest_recovers_hidden_peaks():
+    """A near-Nyquist sine can hide its peaks between samples; the
+    oversampled crest recovers the physical sqrt(2)."""
+    nt = 64
+    nf = nt // 2 + 1
+    f0 = nt // 4  # divides nt: samples hit only 4 points on the phase circle
+    H = np.zeros((1, 1, nf), dtype=complex)
+    H[0, 0, f0] = 1.0
+    phase = np.zeros((1, nf - 2))
+    phase[0, f0 - 1] = np.pi / 4  # sample grid straddles the extrema
+    _, _, x = moments.uvx(H, phase)
+    sampled = np.max(np.abs(x[0])) / np.sqrt(np.mean(x[0] ** 2))
+    physical = moments.oversampled_crest(x, 0, factor=16)
+    assert sampled < np.sqrt(2) - 0.01
+    assert physical == pytest.approx(np.sqrt(2), abs=1e-2)
+
+
 def test_grad_full_loss(H, phase):
     problem = SynthesisProblem(
         H,
