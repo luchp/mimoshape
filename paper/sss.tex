@@ -84,7 +84,7 @@
 \end{titlepage}
 %=============================================================================================================================
 
-\linenumbers
+%\linenumbers
 
 %=============================================================================================================================
 \section*{Abstract}
@@ -92,7 +92,7 @@
 We present a phase-domain method for generating multi-input synthetic vibration signals that match a prescribed cross-spectral density (CSD) together with a user-selected set of higher-order diagonal \emph{and joint} moments. The CSD is enforced structurally by pre-multiplying random-phase, unit-modulus, frequency-domain signals with a Cholesky factor of the target CSD, following the frequency-domain synthesis of Shinozuka and Jan~\cite{shinozuka1972digital} and its extensions to partially coherent and non-Gaussian MIMO outputs~\cite{smallwood1993coherent,smallwood_nongaussian,cui2011matrix}. The remaining phase degrees of freedom are used to shape the channelwise moments -- extending the IFFT phase-manipulation idea of Steinwolf~\cite{steinwolf2011ifft,steinwolf2011twr,steinwolf_book_ngaussian} -- and, crucially, also the joint cross-moments (co-skewness, co-kurtosis) which govern coincident-peak excursions and hence multi-axial fatigue damage~\cite{saathoff2006synthetic}. Closed-form analytic gradients of both diagonal and cross moments with respect to the free phases are derived; each cross-moment target of order $m$ (the number of channel indices in the moment) adds at most $m$ FFTs per gradient evaluation, independent of the number of channels. The resulting problem is smooth and is solved with an analytic-gradient sequential-approximation method (CCSAQ~\cite{svanberg2002ccsaq}) from the NLopt library~\cite{johnson_nlopt}. When the target statistics are estimated from measured multi-axial records the targets are realisable by construction, which we argue is the natural regime for the method. Because every target gradient reduces to the same pattern -- one Fourier transform of the pointwise derivative of a memoryless functional, projected through the conjugated unit-modulus source spectrum $u^*$ and the conjugated frequency response $H^*$ -- the MIMO synthesiser inherits the algorithmic simplicity of the single-channel case, and the framework accommodates any smooth memoryless target functional (moments, cross-moments, endpoint values, absolute-value moments, coincident-excursion probabilities, fatigue-dosage surrogates) with no new machinery. A complete, unit-tested reference implementation -- including Slepian multitaper CSD estimation and analytic-gradient verification against central differences -- is open-sourced at \url{https://github.com/luchp/mimoshape}; every figure and table in this paper is regenerated from it with fixed seeds.
 
 \pagestyle{fancy}
-\lhead{ \includegraphics[height=12mm]{SenseMagic.jpg} }
+\lhead{}% \includegraphics[height=12mm]{SenseMagic.jpg} }
 \chead{}
 \rhead{\Large Synthetic Signal Shaping \vspace{1mm}}
 \lfoot{\parbox[t]{0.6\textwidth}{ \footnotesize
