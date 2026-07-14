@@ -11,7 +11,7 @@ NLopt). See `paper/sss.tex` for the full derivation.
 Specific targets are included for higher-order diagonal and joint moments (skewness, kurtosis, co-skewness, co-kurtosis), and 
 directly minimised functionals such as a smooth crest-factor surrogate.
 
-There are two live web applications where you try it yourself [Crest example](https://sensemagic.nl/app_mimoshape) [MIMO synthesis](https://sensemagic.nl/app_mimoshape_file)
+There are two live web applications where you try it yourself: [Crest minimizer](https://sensemagic.nl/app_mimoshape) and [MIMO synthesizer](https://sensemagic.nl/app_mimoshape_file)
 
 ## Layout
 
