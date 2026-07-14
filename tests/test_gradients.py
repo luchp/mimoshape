@@ -9,7 +9,14 @@ import numpy as np
 import pytest
 
 from mimoshape import moments
-from mimoshape.shaper import MomentTarget, EndpointTarget, CrestTarget, SynthesisProblem
+from mimoshape.shaper import (
+    MomentTarget,
+    EndpointTarget,
+    CrestTarget,
+    FunctionTarget,
+    ScaledFunctionTarget,
+    SynthesisProblem,
+)
 
 NT = 32
 NF = NT // 2 + 1
@@ -165,6 +172,18 @@ def test_oversampled_crest_recovers_hidden_peaks():
     assert physical == pytest.approx(np.sqrt(2), abs=1e-2)
 
 
+def test_grad_scaled_memoryless_matches_kurtosis(H, phase):
+    """g(z) = z^4 on the normalised signal reproduces the normalised kurtosis
+    and its gradient (independent implementations must agree)."""
+    u, v, x = moments.uvx(H, phase)
+    k = 1
+    q = np.mean((x[k] / np.sqrt(np.mean(x[k] ** 2))) ** 4)
+    m, dm = moments.grad_normalized_moment(H, u, v, x, (k, k, k, k))
+    np.testing.assert_allclose(q, m, rtol=1e-12)
+    analytic = moments.grad_scaled_memoryless(H, u, v, x, k, lambda z: 4.0 * z**3)
+    np.testing.assert_allclose(analytic, dm, atol=1e-12)
+
+
 def test_grad_full_loss(H, phase):
     problem = SynthesisProblem(
         H,
@@ -176,7 +195,37 @@ def test_grad_full_loss(H, phase):
         ],
         endpoints=[EndpointTarget(k) for k in range(NJ)],
         crests=[CrestTarget(0, beta=10.0, weight=0.7)],
+        functions=[
+            FunctionTarget(1, np.abs, np.sign, value=0.5, weight=0.6),
+            FunctionTarget(2, lambda y: y**6, lambda y: 6.0 * y**5, weight=0.1),
+            ScaledFunctionTarget(
+                0, lambda z: np.abs(z) ** 4,
+                lambda z: 4.0 * np.abs(z) ** 3 * np.sign(z), weight=0.3,
+            ),
+            ScaledFunctionTarget(
+                2, lambda z: z**3, lambda z: 3.0 * z**2, value=0.2, weight=0.4,
+            ),
+        ],
     )
+    grad = np.empty_like(phase)
+    problem.loss(phase, grad)
+    numeric = moments.numerical_gradient(lambda p: problem.loss(p), phase)
+    np.testing.assert_allclose(grad, numeric, atol=TOL)
+
+
+def test_grad_full_loss_non_pow2_block(rng):
+    """Gradients hold for any even block length, not just powers of two."""
+    nt = 24
+    nf = nt // 2 + 1
+    h = rng.standard_normal((2, 2, nf)) + 1j * rng.standard_normal((2, 2, nf))
+    h[:, :, 0] = 0
+    h[:, :, -1] = 0
+    problem = SynthesisProblem(
+        h,
+        targets=[MomentTarget((0, 0, 0, 0), 4.0)],
+        crests=[CrestTarget(1, beta=10.0)],
+    )
+    phase = rng.uniform(-np.pi, np.pi, (2, nf - 2))
     grad = np.empty_like(phase)
     problem.loss(phase, grad)
     numeric = moments.numerical_gradient(lambda p: problem.loss(p), phase)

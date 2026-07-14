@@ -35,6 +35,33 @@ class MomentTarget:
 
 
 @dataclass(frozen=True)
+class FunctionTarget:
+    """Memoryless functional ``Q = mean_t g(x_k[t])`` for one channel.
+
+    ``g`` and ``gprime`` are vectorised pointwise callables (the setting of
+    Proposition 1).  With ``value`` set the loss gains the moment-style term
+    ``0.5 weight (Q - value)^2``; with ``value=None`` the loss gains
+    ``weight * Q`` and the functional is minimised directly.
+    """
+
+    channel: int
+    g: callable
+    gprime: callable
+    value: float = None
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class ScaledFunctionTarget(FunctionTarget):
+    """``FunctionTarget`` on the std-normalised signal ``z = x_k / std(x_k)``.
+
+    Scale-invariant functionals live here: ``g(z) = z**4`` matches the
+    normalised kurtosis, ``g(z) = |z|**p`` is the l_p crest objective of
+    Guillaume et al.; the variance chain rule is handled analytically.
+    """
+
+
+@dataclass(frozen=True)
 class CrestTarget:
     """Directly minimised smooth crest surrogate for one channel.
 
@@ -77,6 +104,7 @@ class SynthesisProblem:
     targets: list = field(default_factory=list)
     endpoints: list = field(default_factory=list)
     crests: list = field(default_factory=list)
+    functions: list = field(default_factory=list)
 
     def __post_init__(self):
         self.H = np.asarray(self.H, dtype=complex)
@@ -85,8 +113,8 @@ class SynthesisProblem:
         if np.any(self.H[:, :, 0] != 0) or np.any(self.H[:, :, -1] != 0):
             raise ValueError("H must have zero DC and Nyquist bins")
         nt = 2 * (self.H.shape[2] - 1)
-        if nt < 8 or (nt & (nt - 1)) != 0:
-            raise ValueError(f"Block length {nt} must be a power of 2 (>= 8)")
+        if nt < 8:
+            raise ValueError(f"Block length {nt} must be >= 8")
         nj = self.H.shape[0]
         for t in self.targets:
             if any(not 0 <= i < nj for i in t.indices):
@@ -97,6 +125,9 @@ class SynthesisProblem:
         for c in self.crests:
             if not 0 <= c.channel < nj:
                 raise ValueError(f"Crest channel {c.channel} out of range")
+        for f in self.functions:
+            if not 0 <= f.channel < nj:
+                raise ValueError(f"Function channel {f.channel} out of range")
 
     @property
     def num_channels(self):
@@ -131,6 +162,29 @@ class SynthesisProblem:
             else:
                 val = moments.crest_surrogate(x, c.channel, c.beta)
             total += c.weight * val
+
+        for f in self.functions:
+            scaled = isinstance(f, ScaledFunctionTarget)
+            arg = x[f.channel]
+            if scaled:
+                arg = arg / np.sqrt(np.mean(arg**2))
+            q = np.mean(f.g(arg))
+            if f.value is None:
+                total += f.weight * q
+                factor = f.weight
+            else:
+                total += 0.5 * f.weight * (q - f.value) ** 2
+                factor = f.weight * (q - f.value)
+            if want_grad:
+                if scaled:
+                    dq = moments.grad_scaled_memoryless(
+                        self.H, u, v, x, f.channel, f.gprime
+                    )
+                else:
+                    dq = moments.grad_memoryless(
+                        self.H, u, f.gprime(arg), f.channel
+                    )
+                grad += factor * dq
 
         if self.endpoints:
             head = moments.endpoint_value(self.H, u)

@@ -22,6 +22,7 @@ from mimoshape.shaper import (
     MomentTarget,
     EndpointTarget,
     CrestTarget,
+    ScaledFunctionTarget,
     SynthesisProblem,
     MimoShaper,
 )
@@ -223,13 +224,14 @@ def table_timing():
         dt = time.perf_counter() - t0
         nj, _, nf = problem.H.shape
         nt = 2 * (nf - 1)
-        return (
+        row = (
             f"{name} & {nj} & {nt} & {problem.num_free_phases} & "
             f"{evals[0]} & {dt:.2f} & {1e3 * dt / evals[0]:.2f} \\\\"
         )
+        return row, evals[0], dt
 
     rows = [
-        run(f"SISO skew+kurt+endpoint", flat_siso_problem(nt, kurtosis=5.0))
+        run(f"SISO skew+kurt+endpoint", flat_siso_problem(nt, kurtosis=5.0))[0]
         for nt in [2**10, 2**12, 2**14]
     ]
     nt = 2**12
@@ -241,19 +243,28 @@ def table_timing():
             "SISO crest ($\\beta=80$)",
             SynthesisProblem(H, crests=[CrestTarget(0, beta=80)]),
             ftol_rel=1e-7,
-        )
+        )[0]
     )
     problem, _ = mimo_problem(np.random.default_rng(13))
-    rows.append(run("MIMO 2ch, CSD + 5 (cross-)moments", problem))
-    for nj in [4, 8, 16]:
+    rows.append(run("MIMO 2ch, CSD + 5 (cross-)moments", problem)[0])
+    scaling = []
+    for nj in [4, 8, 16, 32]:
         num = 2 * nj + nj * (nj - 1) // 2
-        rows.append(
-            run(
-                f"MIMO scaling, {num} moment targets",
-                gaussian_scaling_problem(nj, 2**10, np.random.default_rng(21)),
-                max_time=300.0,
-            )
+        row, evals, dt = run(
+            f"MIMO scaling, {num} moment targets",
+            gaussian_scaling_problem(nj, 2**10, np.random.default_rng(21)),
+            max_time=300.0,
         )
+        rows.append(row)
+        scaling.append((nj, 1e3 * dt / evals))
+
+    # empirical per-evaluation scaling exponent vs the O(Nj^2) FFT-count claim
+    slope = np.polyfit(
+        np.log([nj for nj, _ in scaling]), np.log([ms for _, ms in scaling]), 1
+    )[0]
+    (TABLES / "timing_stats.tex").write_text(
+        f"\\newcommand{{\\scalingslope}}{{{slope:.2f}}}\n"
+    )
 
     lines = [
         r"\begin{tabular}{l r r r r r r}",
@@ -469,6 +480,141 @@ def fig_crest():
     )
 
 
+# Retzler et al. 2022 (Automatica 146:110654) benchmark setups: block length
+# and active harmonics (flat unless amplitudes given; scaling is CF-invariant).
+RETZLER_SETUPS = {
+    "A": (2048, np.arange(1, 32), None),
+    "B": (1024, np.arange(1, 17), np.sin((2 * np.arange(1, 17) - 1) / 32 * np.pi)),
+    "C": (2048, np.array([1, 2, 4, 8, 16, 32]), None),
+    "D": (
+        8192,
+        np.array([10, 12, 15, 18, 22, 27, 33, 40, 48, 58, 70, 84, 100]),
+        np.sin((2 * np.arange(1, 14) - 1) / 26 * np.pi),
+    ),
+    "E": (800, np.arange(1, 101), None),
+}
+
+# Published sampled-CF (min, avg) over 1000 random starts, Retzler et al. Table 2.
+RETZLER_PUBLISHED = [
+    (
+        r"Van der Ouderaa \emph{et al.}~\cite{vanderouderaa1988peak} (clipping)",
+        {"A": (1.4637, 1.5468), "B": (1.4579, 1.5372), "C": (2.096, 2.0968),
+         "D": (2.076, 2.1944), "E": (1.4857, 1.5564)},
+    ),
+    (
+        r"Guillaume \emph{et al.}~\cite{guillaume1991crest} ($\ell_p$ Chebyshev)",
+        {"A": (1.3563, 1.4085), "B": (1.4042, 1.437), "C": (2.0139, 2.0142),
+         "D": (1.9877, 2.0063), "E": (1.3565, 1.3727)},
+    ),
+    (
+        r"Retzler \emph{et al.}~\cite{retzler2022crest} (nonlinear opt.)",
+        {"A": (1.3513, 1.4041), "B": (1.4004, 1.4316), "C": (2.011, 2.0123),
+         "D": (1.9815, 1.9961), "E": (1.3512, 1.3683)},
+    ),
+    (
+        r"Janeiro \emph{et al.}~\cite{janeiro2020abc} (bee colony)",
+        {"A": (1.5409, 1.6314), "B": (1.4181, 1.4978), "C": (2.011, 2.0124),
+         "D": (1.9862, 2.0257), "E": (1.7858, 1.8947)},
+    ),
+]
+
+
+def table_crest_benchmark():
+    """Crest-factor benchmark on the five multisine setups of Retzler et al.
+
+    Runs the beta-continued crest surrogate and -- demonstrating that the
+    framework subsumes the classical l_p objective as a scaled-function
+    target -- an l_p continuation with doubling p, both from independent
+    random starts, and tabulates sampled crest min/avg against the published
+    1000-start statistics of the dedicated crest optimisers.
+    """
+    num_seeds = 25
+    opts = dict(max_time=30.0, ftol_rel=1e-11, xtol_rel=0.0)
+    betas = [5.0 * 2**k for k in range(10)]  # 5 .. 2560
+    ps = [2**k for k in range(2, 10)]  # 4 .. 512
+
+    def crest_of(x):
+        return np.max(np.abs(x)) / np.sqrt(np.mean(x**2))
+
+    def multisine_H(nt, bins, amps):
+        nf = nt // 2 + 1
+        H = np.zeros((1, 1, nf), dtype=complex)
+        H[0, 0, bins] = 1.0 if amps is None else amps
+        return H
+
+    def lp_target(p):
+        # |z|^p with exponent clipping so large p stays finite in float64
+        def g(z):
+            return np.exp(np.minimum(p * np.log(np.maximum(np.abs(z), 1e-12)), 500.0))
+
+        def gprime(z):
+            loga = np.log(np.maximum(np.abs(z), 1e-12))
+            return p * np.exp(np.minimum((p - 1) * loga, 500.0)) * np.sign(z)
+
+        return ScaledFunctionTarget(0, g, gprime)
+
+    def continuation(H, seed, problems):
+        rng = np.random.default_rng(seed)
+        phase = rng.uniform(-np.pi, np.pi, H.shape[2] - 2)
+        for problem in problems:
+            shaper = MimoShaper(problem, **opts)
+            x = shaper.make_block(start=phase)
+            phase = shaper.last_phase
+        return crest_of(x[0])
+
+    ours = [
+        (
+            r"this work, crest surrogate ($\beta$-continued)",
+            lambda H, s: continuation(
+                H, s, [SynthesisProblem(H, crests=[CrestTarget(0, beta=b)]) for b in betas]
+            ),
+        ),
+        (
+            r"this work, $\ell_p$ scaled-function target",
+            lambda H, s: continuation(
+                H, s, [SynthesisProblem(H, functions=[lp_target(p)]) for p in ps]
+            ),
+        ),
+    ]
+
+    def fmt_pub(v):  # reproduce published decimals, no false precision
+        return f"{v:.4f}".rstrip("0").rstrip(".")
+
+    our_rows, times = [], []
+    for label, run in ours:
+        cells = []
+        for name, (nt, bins, amps) in RETZLER_SETUPS.items():
+            H = multisine_H(nt, bins, amps)
+            t0 = time.perf_counter()
+            cf = np.array([run(H, seed) for seed in range(num_seeds)])
+            times.append((time.perf_counter() - t0) / num_seeds)
+            cells.append(f"{cf.min():.4f}/{cf.mean():.4f}")
+            print(f"  {label} {name}: min {cf.min():.4f} avg {cf.mean():.4f} "
+                  f"({times[-1]:.1f}s/start)")
+        our_rows.append(f"{label} & " + " & ".join(cells) + r" \\")
+
+    pub_rows = [
+        label + " & " + " & ".join(
+            f"{fmt_pub(v[0])}/{fmt_pub(v[1])}" for v in (stats[s] for s in RETZLER_SETUPS)
+        ) + r" \\"
+        for label, stats in RETZLER_PUBLISHED
+    ]
+    lines = [
+        r"\begin{tabular}{l c c c c c}",
+        r"method & A & B & C & D & E \\",
+        r"\hline",
+        *pub_rows,
+        r"\hline",
+        *our_rows,
+        r"\end{tabular}",
+    ]
+    (TABLES / "crest_benchmark.tex").write_text("\n".join(lines) + "\n")
+    (TABLES / "crest_bench_stats.tex").write_text(
+        f"\\newcommand{{\\crestbenchseeds}}{{{num_seeds}}}\n"
+        f"\\newcommand{{\\crestbenchtimes}}{{{min(times):.1f}--{max(times):.0f}}}\n"
+    )
+
+
 def load_road_record():
     """Measured road record from the shipped npz: (record, fs, names, units).
 
@@ -627,6 +773,103 @@ def fig_and_table_road():
     )
 
 
+def fig_and_table_multimodel():
+    """Minimal multimodel validation on a two-regime composite record.
+
+    A surrogate record whose second half is rougher (variance x6, heavier
+    tails) rejects stationarity; a single compromise model reproduces the
+    pooled statistics but no regime structure, while eight per-section
+    models with crossfaded joints track the segment mean-square profile and
+    the per-regime kurtosis.  Quotes reverse-arrangements z-scores on the
+    32-segment mean-square sequence for record, single-model and multimodel
+    syntheses.
+    """
+    rng = np.random.default_rng(29)
+    n, num_sections, nfft = 2**16, 8, 2048
+    ff = np.fft.rfftfreq(n)
+    lowpass = 1.0 / (1.0 + (ff / 0.08) ** 2)
+    resonance = 1.0 / np.abs(1.0 + 2j * 0.05 * (ff / 0.2) - (ff / 0.2) ** 2)
+
+    def colour(sig, mag):
+        return np.fft.irfft(np.fft.rfft(sig) * mag, n)
+
+    base = rng.standard_normal(n)
+    record = np.vstack(
+        [
+            colour(base, lowpass) + 0.3 * colour(rng.standard_normal(n), lowpass),
+            0.7 * colour(base, resonance) + 0.5 * colour(rng.standard_normal(n), resonance),
+        ]
+    )
+    # second half: rough regime, level x2.5 with moderately heavier tails
+    rough = 2.5 * record[:, n // 2 :]
+    z = rough / np.std(rough, axis=1, keepdims=True)
+    record[:, n // 2 :] = rough * (1.0 + 0.06 * z**2)
+
+    tuples = multimodel.moment_tuples(2)
+    kwargs = dict(max_time=10.0, stop_loss=1e-10, rng=np.random.default_rng(31))
+    models = multimodel.estimate_section_models(record, num_sections, tuples, nfft=nfft)
+    multi = multimodel.synthesize_multimodel(models, blocks_per_section=4, **kwargs)
+    pooled = multimodel.estimate_section_models(record, 1, tuples, nfft=nfft)
+    single = multimodel.synthesize_multimodel(pooled, blocks_per_section=32, **kwargs)
+
+    num_segments = 32
+
+    def ms_profile(y):
+        return stationarity.segment_statistic(y[0], num_segments, "ms")[0]
+
+    def ra_z(y):  # worst-channel reverse-arrangements z on the mean-square sequence
+        s = stationarity.segment_statistic(y, num_segments, "ms")
+        return np.abs(stationarity.reverse_arrangements_test(s).z).max()
+
+    def half_kurtosis(y):
+        half = y.shape[1] // 2
+        return (
+            moments.normalized_moment(y[:1, :half], (0, 0, 0, 0)),
+            moments.normalized_moment(y[:1, half:], (0, 0, 0, 0)),
+        )
+
+    fig, (ax_trace, ax_ms) = plt.subplots(
+        1, 2, figsize=(9, 3.2), gridspec_kw={"width_ratios": [1.4, 1]}
+    )
+    scale = np.std(record[0])
+    for offset, (y, label) in enumerate(
+        [(record, "measured"), (multi.merged, "multimodel"), (single.merged, "single model")]
+    ):
+        tt = np.linspace(0.0, 1.0, y.shape[1])
+        ax_trace.plot(tt, y[0] / scale - 8.0 * offset, linewidth=0.3, label=label)
+    ax_trace.set_xlabel("record time (normalised)")
+    ax_trace.set_yticks([])
+    ax_trace.legend(fontsize=8, loc="upper left")
+    ax_trace.grid(alpha=0.4)
+
+    for y, label, style in [
+        (record, "measured", "C0o-"),
+        (multi.merged, "multimodel", "C1s-"),
+        (single.merged, "single model", "C2^--"),
+    ]:
+        ax_ms.semilogy(np.arange(num_segments), ms_profile(y), style,
+                       markersize=3, linewidth=0.8, label=label)
+    ax_ms.set_xlabel(f"segment (of {num_segments})")
+    ax_ms.set_ylabel("segment mean square")
+    ax_ms.legend(fontsize=8)
+    ax_ms.grid(alpha=0.4, which="both")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "multimodel.pdf")
+    plt.close(fig)
+
+    rec_q, rec_r = half_kurtosis(record)
+    mm_q, mm_r = half_kurtosis(multi.merged)
+    sg_q, sg_r = half_kurtosis(single.merged)
+    (TABLES / "multimodel_stats.tex").write_text(
+        f"\\newcommand{{\\mmzrecord}}{{{ra_z(record):.1f}}}\n"
+        f"\\newcommand{{\\mmzmulti}}{{{ra_z(multi.merged):.1f}}}\n"
+        f"\\newcommand{{\\mmzsingle}}{{{ra_z(single.merged):.1f}}}\n"
+        f"\\newcommand{{\\mmkurtrecord}}{{{rec_q:.1f}/{rec_r:.1f}}}\n"
+        f"\\newcommand{{\\mmkurtmulti}}{{{mm_q:.1f}/{mm_r:.1f}}}\n"
+        f"\\newcommand{{\\mmkurtsingle}}{{{sg_q:.1f}/{sg_r:.1f}}}\n"
+    )
+
+
 def fig_title_art():
     """Original title-page artwork, generated by the synthesiser itself.
 
@@ -669,16 +912,23 @@ def fig_title_art():
 def main():
     FIGURES.mkdir(parents=True, exist_ok=True)
     TABLES.mkdir(parents=True, exist_ok=True)
-    for job in [
+    jobs = [
         fig_siso_block,
         fig_convergence,
         fig_restarts,
         table_timing,
         fig_crest,
+        table_crest_benchmark,
         fig_and_table_mimo,
         fig_and_table_road,
+        fig_and_table_multimodel,
         fig_title_art,
-    ]:
+    ]
+    import sys
+
+    if len(sys.argv) > 1:  # optionally run a subset: make_figures.py fig_crest ...
+        jobs = [job for job in jobs if job.__name__ in sys.argv[1:]]
+    for job in jobs:
         t0 = time.time()
         job()
         print(f"{job.__name__}: {time.time() - t0:.1f}s")

@@ -79,6 +79,21 @@ def grad_memoryless(H, u, gprime, k):
     return (2.0 / nt**2) * np.imag(np.conj(u) * np.conj(H[k]) * np.fft.rfft(gprime))
 
 
+def grad_scaled_memoryless(H, u, v, x, k, gprime):
+    """Phase gradient of ``Q = mean_t g(z_k[t])`` on ``z_k = x_k / std(x_k)``.
+
+    The std normalisation is phase-dependent, so the memoryless identity
+    combines with the variance chain rule (as in the crest surrogate):
+    ``dQ = (1/s) grad_memoryless(g'(z)) - mean(g'(z) z) / (2 s^2) dP_(k,k)``.
+    """
+    s = np.sqrt(np.mean(x[k] ** 2))
+    z = x[k] / s
+    gp = gprime(z)
+    dq = grad_memoryless(H, u, gp, k)
+    dvar = grad_variance(H, u, v, k)
+    return dq / s - (np.mean(gp * z) / (2.0 * s**2)) * dvar
+
+
 def crest_surrogate(x, k, beta):
     """Smooth crest surrogate ``(1/beta) log mean cosh(beta x_k / std(x_k))``.
 
