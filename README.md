@@ -14,6 +14,8 @@ NLopt). See `paper/sss.tex` for the full derivation.
 - `src/mimoshape/moments.py` — pure numerics: signals, moments, analytic gradients
 - `src/mimoshape/shaper.py` — target set, loss assembly, NLopt wiring
 - `src/mimoshape/estimate.py` — targets from measured records: multitaper CSD → Cholesky `H`, sample moments
+- `src/mimoshape/stationarity.py` — segment-statistic stationarity tests (reverse arrangements, runs)
+- `src/mimoshape/multimodel.py` — piecewise synthesis for non-stationary records: per-section models, block merging (crossfade / C1 / zero)
 - `tests/` — analytic-vs-numerical gradient checks
 - `examples/` — runnable demos
 - `scripts/make_figures.py` — regenerates every figure and table in the paper

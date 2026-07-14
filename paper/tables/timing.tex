@@ -1,9 +1,12 @@
 \begin{tabular}{l r r r r r r}
 problem & $N_j$ & $N_t$ & phases & evals & s/block & ms/eval \\
 \hline
-SISO skew+kurt+endpoint & 1 & 1024 & 511 & 78 & 0.01 & 0.13 \\
-SISO skew+kurt+endpoint & 1 & 4096 & 2047 & 95 & 0.02 & 0.25 \\
-SISO skew+kurt+endpoint & 1 & 16384 & 8191 & 71 & 0.05 & 0.74 \\
-SISO crest ($\beta=80$) & 1 & 4096 & 2047 & 9652 & 1.59 & 0.16 \\
-MIMO 2ch, CSD + 5 (cross-)moments & 2 & 1024 & 1022 & 1387 & 0.37 & 0.26 \\
+SISO skew+kurt+endpoint & 1 & 1024 & 511 & 78 & 0.02 & 0.24 \\
+SISO skew+kurt+endpoint & 1 & 4096 & 2047 & 95 & 0.05 & 0.55 \\
+SISO skew+kurt+endpoint & 1 & 16384 & 8191 & 71 & 0.11 & 1.51 \\
+SISO crest ($\beta=80$) & 1 & 4096 & 2047 & 9652 & 3.14 & 0.32 \\
+MIMO 2ch, CSD + 5 (cross-)moments & 2 & 1024 & 1022 & 1387 & 0.74 & 0.53 \\
+MIMO scaling, 14 moment targets & 4 & 1024 & 2044 & 29 & 0.05 & 1.85 \\
+MIMO scaling, 44 moment targets & 8 & 1024 & 4088 & 40 & 0.28 & 6.92 \\
+MIMO scaling, 152 moment targets & 16 & 1024 & 8176 & 81 & 3.01 & 37.13 \\
 \end{tabular}

@@ -86,7 +86,21 @@ def test_signal_stats_known_values():
     assert s["std"][0] == pytest.approx(2.29128785)
     assert s["skewness"][0] == pytest.approx(0.0, abs=1e-12)
     assert s["kurtosis"][0] == pytest.approx(1.76190476)
-    assert s["crest"][0] == pytest.approx(3.05505046)
+    assert s["crest"][0] == pytest.approx(3.5 / 2.29128785)  # max|x-mean|/std
+
+
+def test_random_phase_moment_ensemble():
+    """Flat-spectrum random-phase blocks are Gaussian by the CLT."""
+    nt = 512
+    nf = nt // 2 + 1
+    H = np.zeros((1, 1, nf), dtype=complex)
+    H[0, 0, 1:-1] = 1.0
+    mean, std = estimate.random_phase_moment_ensemble(
+        H, [(0, 0, 0), (0, 0, 0, 0)], draws=32, rng=np.random.default_rng(3)
+    )
+    assert mean[0] == pytest.approx(0.0, abs=0.1)  # Gaussian skewness
+    assert mean[1] == pytest.approx(3.0, abs=0.2)  # Gaussian kurtosis
+    assert np.all(std > 0)
 
 
 def test_measured_target_round_trip(record, rng):

@@ -1,10 +1,8 @@
 % =====================================================================
 %  refs.bib  --  Synthetic Signal Shaping
-%  Bibliography for sss3.tex
+%  Bibliography for sss.tex
 %  Author entries confirmed from PDF metadata in ../Publications and
-%  ../Patent/publications. Entries marked "% TODO verify" were extracted
-%  from scan-only PDFs and need manual confirmation of authors, journal,
-%  and year.
+%  ../Patent/publications, or against Crossref metadata.
 % =====================================================================
 
 % ----- Steinwolf, principal prior-art author on phase-manipulation -----
@@ -46,7 +44,11 @@
   title   = {Generation of stationary non-{G}aussian time histories with a specified cross-spectral density},
   journal = {Shock and Vibration},
   year    = {1997},
-  note    = {Sandia National Laboratories; % TODO verify volume/pages},
+  volume  = {4},
+  number  = {5-6},
+  pages   = {361--377},
+  doi     = {10.1155/1997/713593},
+  note    = {Sandia National Laboratories},
 }
 
 % ----- Shinozuka & Jan --- foundational digital simulation ---
@@ -65,20 +67,20 @@
 % ----- Hsueh & Hamernik --- generalized noise synthesis ---
 
 @article{hsueh1990generalized,
-  author  = {Hsueh, K.-D. and Hamernik, R. P.},
+  author  = {Hsueh, Keng D. and Hamernik, Roger P.},
   title   = {A generalized approach to random noise synthesis: Theory and computer simulation},
   journal = {Journal of the Acoustical Society of America},
   year    = {1990},
   volume  = {87},
   number  = {3},
   pages   = {1207--1217},
-  note    = {% TODO verify},
+  doi     = {10.1121/1.398795},
 }
 
 % ----- MIMO random vibration control (Chinese J. Aeronautics) -----
 
 @article{cui2011matrix,
-  author  = {Cui, Xuli and Chen, Huaihai and He, Xudong and Tao, Junyong},
+  author  = {Cui, Xuli and Chen, Huaihai and He, Xudong and Jiang, Shuangyan},
   title   = {Matrix power control algorithm for multi-input multi-output random vibration test},
   journal = {Chinese Journal of Aeronautics},
   year    = {2011},
@@ -86,7 +88,6 @@
   number  = {6},
   pages   = {741--748},
   doi     = {10.1016/S1000-9361(11)60087-3},
-  note    = {% TODO verify co-authors},
 }
 
 % ----- Stolze et al. --- synthetic road for multiaxial fatigue -----
@@ -99,57 +100,6 @@
   volume  = {48},
   number  = {4},
   pages   = {164--167},
-}
-
-% ----- Van Baren & Lang --- practitioner view on random controllers -----
-
-@article{lang_vanbaren_chi,
-  author  = {Lang, George Fox and Van Baren, Philip},
-  title   = {Does your random controller square with chi?},
-  journal = {Sound and Vibration},
-  year    = {2009},
-  note    = {% TODO verify month/volume},
-}
-
-% ----- Tustin --- introductory reference (Equipment Reliability Institute)
-
-@techreport{tustin_shakers,
-  author      = {Tustin, Wayne},
-  title       = {Faster, Better, Cheaper Vibration Testing With Electrodynamic Shakers},
-  institution = {Equipment Reliability Institute},
-  year        = {2011},
-  note        = {% TODO verify report number},
-}
-
-% ----- Larkin 2016 arXiv (image entropy; used only if a 2D signal
-%       extension is discussed) -----
-
-@techreport{larkin2016delentropy,
-  author      = {Larkin, Kieran G.},
-  title       = {Reflections on {S}hannon Information: In search of a natural information-entropy for images},
-  institution = {arXiv},
-  year        = {2016},
-  number      = {arXiv:1609.01117},
-  url         = {https://arxiv.org/abs/1609.01117},
-}
-
-% ----- Zhang et al --- 2D spectrum-density kurtosis for images -----
-
-@article{zhang_2d_kurtosis,
-  author  = {Zhang, Fan and others},
-  title   = {The spectrum density kurtosis of two-dimensional processes and its applications to image sharpness},
-  year    = {2018},
-  note    = {% TODO verify authors and journal},
-}
-
-% ----- MIMO sine FRF technique (2006 conference) -----
-
-@inproceedings{mimo_sine_frf,
-  author    = {% TODO verify authors},
-  title     = {A new {MIMO} sine testing technique for accelerated, high quality {FRF} measurements},
-  booktitle = {Proceedings of ISMA},
-  year      = {2006},
-  note      = {% TODO verify},
 }
 
 % ----- Steinwolf book chapter (non-Gaussian in digital systems) -----
@@ -264,7 +214,7 @@
 
 % ----- Powell --- COBYLA and MMA/CCSAQ family for the optimizer section
 
-@article{powell1994cobyla,
+@incollection{powell1994cobyla,
   author    = {Powell, M. J. D.},
   title     = {A direct search optimization method that models the objective and constraint functions by linear interpolation},
   booktitle = {Advances in Optimization and Numerical Analysis},
@@ -293,16 +243,6 @@
   howpublished = {\url{https://github.com/stevengj/nlopt}},
   year         = {2007--present},
 }
-
-% =====================================================================
-%  Not yet identified (scan-only PDFs -- verify by opening manually):
-%   - Bench_Dynamic_Test_Asym_Prob_Distr.pdf
-%   - Comments_on_Kurtosis_of_Mil_Data.pdf
-%   - Computational_Statistics_and_Data_Analysis.pdf
-%   - Method_for_Shaker_Sim_of_Non-Gaussian_vibs.pdf
-%   - Two_Meths_Rand_Shaker_Test_low_kurtosis.pdf
-%   - AdvancedSystmIdentificationMethodsForImprovedServiceLoadSimulationOnMultiAxialTestRigs.pdf
-% =====================================================================
 
 @book{bendat1998nonlinear,
   author    = {Bendat, Julius S.},
@@ -367,14 +307,6 @@
   year    = {1978}
 }
 
-@book{higham2008functions,
-  author    = {Higham, Nicholas J.},
-  title     = {Functions of Matrices: Theory and Computation},
-  publisher = {SIAM},
-  address   = {Philadelphia},
-  year      = {2008}
-}
-
 @article{higham1988nearest,
   author  = {Higham, Nicholas J.},
   title   = {Computing a Nearest Symmetric Positive Semidefinite Matrix},
@@ -382,32 +314,4 @@
   volume  = {103},
   pages   = {103--118},
   year    = {1988}
-}
-
-@book{golub_vanloan_2013,
-  author    = {Golub, Gene H. and Van Loan, Charles F.},
-  title     = {Matrix Computations},
-  edition   = {4th},
-  publisher = {Johns Hopkins University Press},
-  year      = {2013}
-}
-
-@article{burer_monteiro_2003,
-  author  = {Burer, Samuel and Monteiro, Renato D. C.},
-  title   = {A Nonlinear Programming Algorithm for Solving Semidefinite Programs via Low-Rank Factorization},
-  journal = {Mathematical Programming},
-  volume  = {95},
-  number  = {2},
-  pages   = {329--357},
-  year    = {2003}
-}
-
-@article{journee_bach_absil_sepulchre_2010,
-  author  = {Journ{\'e}e, Michel and Bach, Francis and Absil, P.-A. and Sepulchre, Rodolphe},
-  title   = {Low-Rank Optimization on the Cone of Positive Semidefinite Matrices},
-  journal = {SIAM Journal on Optimization},
-  volume  = {20},
-  number  = {5},
-  pages   = {2327--2351},
-  year    = {2010}
 }

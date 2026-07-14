@@ -3,6 +3,8 @@
 from .shaper import MomentTarget, EndpointTarget, CrestTarget, SynthesisProblem, MimoShaper
 from . import moments
 from . import estimate
+from . import stationarity
+from . import multimodel
 
 __all__ = [
     "MomentTarget",
@@ -12,4 +14,6 @@ __all__ = [
     "MimoShaper",
     "moments",
     "estimate",
+    "stationarity",
+    "multimodel",
 ]

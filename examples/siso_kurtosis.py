@@ -15,7 +15,7 @@ def stats(x):
         "std": std,
         "skewness": np.mean(x**3) / std**3,
         "kurtosis": np.mean(x**4) / std**4,
-        "crest": (np.max(x) - np.min(x)) / std,
+        "crest": np.max(np.abs(x)) / std,
     }
 
 

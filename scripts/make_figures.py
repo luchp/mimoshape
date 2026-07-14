@@ -17,7 +17,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from mimoshape import estimate, moments
+from mimoshape import estimate, moments, multimodel, stationarity
 from mimoshape.shaper import (
     MomentTarget,
     EndpointTarget,
@@ -29,6 +29,7 @@ from mimoshape.shaper import (
 PAPER = pathlib.Path(__file__).resolve().parent.parent / "paper"
 FIGURES = PAPER / "figures"
 TABLES = PAPER / "tables"
+ROAD_NPZ = pathlib.Path(__file__).resolve().parent.parent / "data" / "roadsection_220s_300hz.npz"
 
 MIMO_TUPLES = [(0, 0, 0), (1, 1, 1), (0, 0, 0, 0), (1, 1, 1, 1), (0, 0, 1, 1)]
 TUPLE_LABELS = {
@@ -110,7 +111,9 @@ def fig_convergence():
 
     The infeasible target (kurtosis 1.0, below the achievable floor) shows
     CCSAQ descending smoothly onto the feasibility boundary; the residual
-    loss measures the infeasibility gap.
+    loss measures the infeasibility gap.  The kurtosis actually reached by
+    the infeasible run is the empirical floor for this spectrum and is
+    exported as the ``\\kurtfloor`` macro used by the paper.
     """
     fig, ax = plt.subplots(figsize=(6, 3.2))
     for kurtosis, style, label in [
@@ -131,6 +134,12 @@ def fig_convergence():
         )
         shaper.make_block()
         ax.semilogy(losses, style, linewidth=0.8, label=label)
+        if kurtosis == 1.0:
+            x = problem.signal(shaper.last_phase)
+            floor = moments.normalized_moment(x, (0, 0, 0, 0))
+            (TABLES / "kurt_floor.tex").write_text(
+                f"\\newcommand{{\\kurtfloor}}{{{floor:.2f}}}\n"
+            )
     ax.set_xlabel("objective evaluation")
     ax.set_ylabel(r"loss $\Xi$")
     ax.legend(fontsize=8)
@@ -171,10 +180,34 @@ def fig_restarts():
     )
 
 
+def gaussian_scaling_problem(nj, nt, rng):
+    """``nj``-channel problem with a flat partially coherent CSD and
+    Gaussian-consistent targets: skewness 0 and kurtosis 3 per channel plus
+    every pair co-kurtosis at its jointly Gaussian value ``1 + 2 rho_ij^2``.
+
+    Feasible by the central limit theorem, so the timing rows measure
+    convergence to a realisable target set at growing channel count.
+    """
+    nf = nt // 2 + 1
+    mix = np.eye(nj) + 0.5 * np.tril(rng.standard_normal((nj, nj)), -1)
+    H = np.zeros((nj, nj, nf), dtype=complex)
+    H[:, :, 1:-1] = mix[:, :, None]
+    cov = mix @ mix.T
+    rho = cov / np.sqrt(np.outer(np.diag(cov), np.diag(cov)))
+    targets = []
+    for k in range(nj):
+        targets.append(MomentTarget((k, k, k), 0.0))
+        targets.append(MomentTarget((k, k, k, k), 3.0))
+    for i in range(nj):
+        for j in range(i + 1, nj):
+            targets.append(MomentTarget((i, i, j, j), 1.0 + 2.0 * rho[i, j] ** 2))
+    return SynthesisProblem(H, targets=targets)
+
+
 def table_timing():
     """Wall-clock cost per block for several sizes and objective mixes."""
 
-    def run(name, problem, **kwargs):
+    def run(name, problem, max_time=60.0, stop_loss=1e-10, **kwargs):
         evals = [0]
 
         def count(loss):
@@ -182,7 +215,7 @@ def table_timing():
             return False
 
         shaper = MimoShaper(
-            problem, progress=count, max_time=60, stop_loss=1e-10,
+            problem, progress=count, max_time=max_time, stop_loss=stop_loss,
             rng=np.random.default_rng(7), **kwargs,
         )
         t0 = time.perf_counter()
@@ -212,6 +245,15 @@ def table_timing():
     )
     problem, _ = mimo_problem(np.random.default_rng(13))
     rows.append(run("MIMO 2ch, CSD + 5 (cross-)moments", problem))
+    for nj in [4, 8, 16]:
+        num = 2 * nj + nj * (nj - 1) // 2
+        rows.append(
+            run(
+                f"MIMO scaling, {num} moment targets",
+                gaussian_scaling_problem(nj, 2**10, np.random.default_rng(21)),
+                max_time=300.0,
+            )
+        )
 
     lines = [
         r"\begin{tabular}{l r r r r r r}",
@@ -223,9 +265,9 @@ def table_timing():
     (TABLES / "timing.tex").write_text("\n".join(lines) + "\n")
 
 
-def mimo_blocks(problem, rng, num_blocks):
-    """Optimised blocks and their spectra for the MIMO example."""
-    shaper = MimoShaper(problem, max_time=60, rng=rng)
+def mimo_blocks(problem, rng, num_blocks, **shaper_kwargs):
+    """Optimised blocks and their spectra for the MIMO examples."""
+    shaper = MimoShaper(problem, max_time=60, rng=rng, **shaper_kwargs)
     xs, vs = [], []
     for _ in range(num_blocks):
         x = shaper.make_block()
@@ -252,17 +294,18 @@ def fig_and_table_mimo():
     fig.savefig(FIGURES / "mimo_traces.pdf")
     plt.close(fig)
 
-    # --- moment table (block-averaged achieved values)
+    # --- moment table (achieved mean and spread over the block ensemble)
     lines = [
         r"\begin{tabular}{l l r r}",
-        r"target & tuple $\mathbf{i}$ & $\mu_\mathbf{i}$ & achieved \\",
+        r"target & tuple $\mathbf{i}$ & $\mu_\mathbf{i}$ & achieved (mean $\pm$ std) \\",
         r"\hline",
     ]
     for t in problem.targets:
-        achieved = np.mean([moments.normalized_moment(x, t.indices) for x in xs])
+        vals = [moments.normalized_moment(x, t.indices) for x in xs]
         idx = ",".join(str(i) for i in t.indices)
         lines.append(
-            f"{TUPLE_LABELS[t.indices]} & $({idx})$ & {t.value:.3f} & {achieved:.3f} \\\\"
+            f"{TUPLE_LABELS[t.indices]} & $({idx})$ & {t.value:.3f} & "
+            f"{np.mean(vals):.3f} $\\pm$ {np.std(vals):.3f} \\\\"
         )
     lines.append(r"\end{tabular}")
     (TABLES / "mimo_moments.tex").write_text("\n".join(lines) + "\n")
@@ -353,6 +396,7 @@ def fig_crest():
         1, 2, figsize=(9, 3.4), gridspec_kw={"width_ratios": [1, 1.4]}
     )
     best_block = None
+    results = {}
     cases = [
         (1.0, 0.0, "full spectrum", "C0"),
         (0.5, 0.0, "half band", "C1"),
@@ -364,6 +408,7 @@ def fig_crest():
         direct = np.empty((len(seeds), len(betas)))
         continued = np.empty_like(direct)
         physical = np.empty_like(direct)
+        kurts = np.empty(len(seeds))
         for i, seed in enumerate(seeds):
             start0 = np.random.default_rng(seed).uniform(-np.pi, np.pi, n)
             phase = start0
@@ -373,8 +418,10 @@ def fig_crest():
                 x, phase = optimise(H, beta, phase)
                 continued[i, j] = crest_of(x[0])
                 physical[i, j] = moments.oversampled_crest(x, 0)
+            kurts[i] = moments.normalized_moment(x, (0, 0, 0, 0))
             if taper > 0 and i == 0:
                 best_block = x[0]
+        results[label] = (direct, continued, physical, kurts)
         if taper == 0:
             ax_beta.semilogx(
                 betas, direct.mean(axis=0), style + "o--", label=f"{label}, direct"
@@ -406,6 +453,178 @@ def fig_crest():
     fig.tight_layout()
     fig.savefig(FIGURES / "crest_beta.pdf")
     plt.close(fig)
+
+    # seed-averaged headline numbers at the final beta, quoted in the paper
+    full_d, full_c, full_p, full_k = results["full spectrum"]
+    _, half_c, half_p, _ = results["half band"]
+    _, _, taper_p, _ = results["half band, 10% taper"]
+    (TABLES / "crest_stats.tex").write_text(
+        f"\\newcommand{{\\crestfullsampled}}{{{full_c[:, -1].mean():.2f}}}\n"
+        f"\\newcommand{{\\crestfulldirect}}{{{full_d[:, -1].mean():.2f}}}\n"
+        f"\\newcommand{{\\crestfullphysical}}{{{full_p[:, -1].mean():.2f}}}\n"
+        f"\\newcommand{{\\crestfullkurt}}{{{full_k.mean():.2f}}}\n"
+        f"\\newcommand{{\\cresthalfsampled}}{{{half_c[:, -1].mean():.2f}}}\n"
+        f"\\newcommand{{\\cresthalfphysical}}{{{half_p[:, -1].mean():.2f}}}\n"
+        f"\\newcommand{{\\cresttaperphysical}}{{{taper_p[:, -1].mean():.2f}}}\n"
+    )
+
+
+def load_road_record():
+    """Measured road record from the shipped npz: (record, fs, names, units).
+
+    12 wheel-hub force/moment channels (left/right measuring hubs) sampled at
+    300 Hz on a test track, static offsets removed.  The npz stores the native
+    int16 samples with per-channel scale; see data/roadsection_220s_300hz.npz.
+    """
+    z = np.load(ROAD_NPZ)
+    y = z["data_int16"].astype(np.float64) * z["scale"][:, None]
+    y -= np.mean(y, axis=1, keepdims=True)
+    return y, float(z["fs"]), list(z["names"]), list(z["units"])
+
+
+def road_tuples(num_channels):
+    """Per-channel skewness+kurtosis and left/right co-kurtosis pairs.
+
+    Channels come interleaved (left, right) per physical quantity, so the
+    pair (2i, 2i+1) is the same force/moment on the two wheel hubs.
+    """
+    tuples = multimodel.moment_tuples(num_channels, cokurtosis=False)
+    tuples += [(k, k, k + 1, k + 1) for k in range(0, num_channels, 2)]
+    return tuples
+
+
+def fig_and_table_road():
+    """Measured road-record example: 12-channel targets, traces, CSD, stats."""
+    rng = np.random.default_rng(17)
+    record, fs, names, units = load_road_record()
+    nj, n = record.shape
+    nfft = 1024
+
+    G_target = estimate.multitaper_csd(record, nw=4.0, nfft=nfft)
+    H = estimate.csd_to_frf(G_target, variance=np.var(record, axis=1))
+    targets = estimate.estimate_moment_targets(record, road_tuples(nj))
+    problem = SynthesisProblem(H, targets=targets)
+
+    t0 = time.time()
+    # 30 coupled targets share one loss: tighten the stop criteria so no
+    # single moment parks a visible offset inside the tolerance ball
+    xs, _ = mimo_blocks(
+        problem, rng, num_blocks=32, stop_loss=1e-10, ftol_rel=1e-9, xtol_rel=1e-8
+    )
+    block_seconds = (time.time() - t0) / 32
+
+    # --- moment tables: diagonal per channel, left/right co-kurtosis pairs
+    by_index = {t.indices: t for t in targets}
+
+    def ach(indices):
+        vals = [moments.normalized_moment(x, indices) for x in xs]
+        return f"{np.mean(vals):.3f} $\\pm$ {np.std(vals):.4f}"
+
+    lines = [
+        r"\begin{tabular}{l r r r r}",
+        r"channel & $\hat\mu_{(k,k,k)}$ & achieved & $\hat\mu_{(k,k,k,k)}$ & achieved \\",
+        r"\hline",
+    ]
+    for k, name in enumerate(names):
+        skew, kurt = by_index[(k, k, k)], by_index[(k, k, k, k)]
+        lines.append(
+            f"\\texttt{{{name}}} & {skew.value:.3f} & {ach(skew.indices)} & "
+            f"{kurt.value:.3f} & {ach(kurt.indices)} \\\\"
+        )
+    lines.append(r"\end{tabular}")
+    (TABLES / "road_moments.tex").write_text("\n".join(lines) + "\n")
+
+    lines = [
+        r"\begin{tabular}{l r r}",
+        r"left/right pair & $\hat\mu_\mathbf{i}$ & achieved \\",
+        r"\hline",
+    ]
+    for k in range(0, nj, 2):
+        t = by_index[(k, k, k + 1, k + 1)]
+        lines.append(
+            f"\\texttt{{{names[k]}}}/\\texttt{{{names[k + 1]}}} & "
+            f"{t.value:.3f} & {ach(t.indices)} \\\\"
+        )
+    lines.append(r"\end{tabular}")
+    (TABLES / "road_cokurt.tex").write_text("\n".join(lines) + "\n")
+
+    # --- traces: measured excerpt vs one synthesised block, extreme channels
+    shown = [names.index("FZMRHL"), names.index("MZMRHL")]
+    excerpt = slice(16 * nfft, 17 * nfft)
+    tt = np.arange(nfft) / fs
+    fig, axes = plt.subplots(2, 2, sharex=True, figsize=(7, 4))
+    for row, k in enumerate(shown):
+        axes[row, 0].plot(tt, record[k, excerpt], linewidth=0.4)
+        axes[row, 1].plot(tt, xs[0][k], "C1", linewidth=0.4)
+        for col in (0, 1):
+            axes[row, col].grid(alpha=0.4)
+        axes[row, 0].set_ylabel(f"{names[k]} [{units[k]}]")
+    axes[0, 0].set_title("measured excerpt", fontsize=9)
+    axes[0, 1].set_title("synthesised block", fontsize=9)
+    for col in (0, 1):
+        axes[1, col].set_xlabel("time [s]")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "road_traces.pdf")
+    plt.close(fig)
+
+    # --- CSD reproduction for the most coherent physical pair (FZ left/right)
+    p, q = names.index("FZMRHL"), names.index("FZMRHR")
+    G_real = estimate.multitaper_csd(np.hstack(xs), nw=4.0, nfft=nfft)
+    G_real *= 2.0 / nfft
+    G_scaled = np.einsum("pjf,qjf->pqf", H, np.conj(H)) * (2.0 / nfft**2)
+
+    def coherence(g):
+        return np.abs(g[p, q, 1:-1]) ** 2 / (
+            np.abs(g[p, p, 1:-1]) * np.abs(g[q, q, 1:-1])
+        )
+
+    ff = np.arange(G_target.shape[2])[1:-1] * fs / nfft
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(7, 6))
+    for k, style in ((p, "C0"), (q, "C2")):
+        axes[0].semilogy(ff, np.abs(G_scaled[k, k, 1:-1]), style, label=f"target {names[k]}")
+        axes[0].semilogy(ff, np.abs(G_real[k, k, 1:-1]), style + "--", alpha=0.7,
+                         label=f"synthesised {names[k]}")
+    axes[0].set_ylabel(r"PSD [$\mathrm{N^2/bin}$]")
+    axes[0].legend(fontsize=8, ncol=2)
+    axes[1].plot(ff, coherence(G_scaled), "C0", label="target")
+    axes[1].plot(ff, coherence(G_real), "C1--", alpha=0.7, label="synthesised")
+    axes[1].set_ylabel("coherence L/R")
+    axes[1].legend(fontsize=8)
+    axes[2].plot(ff, np.angle(G_scaled[p, q, 1:-1]), "C0")
+    axes[2].plot(ff, np.angle(G_real[p, q, 1:-1]), "C1--", alpha=0.7)
+    axes[2].set_ylabel("cross phase L/R")
+    axes[2].set_xlabel("frequency [Hz]")
+    for ax in axes:
+        ax.grid(alpha=0.4)
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.35)
+    fig.savefig(FIGURES / "road_csd.pdf")
+    plt.close(fig)
+
+    # --- generated statistics quoted in the text (no manual transcription)
+    nf = G_target.shape[2]
+    cond = np.array([np.linalg.cond(G_target[:, :, k]) for k in range(1, nf - 1)])
+    d = np.real(np.einsum("kkf->kf", G_target))
+    coh = np.abs(G_target) ** 2 / (d[:, None, :] * d[None, :, :])
+    iu = np.triu_indices(nj, 1)
+    coh_max = coh[iu[0], iu[1], 1:-1].max()
+
+    report = stationarity.stationarity_report(record, num_segments=32)
+    rejected = np.zeros(nj, dtype=bool)
+    for stat in report.values():
+        for test in ("reverse_arrangements", "runs"):
+            rejected |= stat[test].p < 0.01
+    stats = estimate.signal_stats(record)
+    exponent = int(np.floor(np.log10(cond.max())))
+    mantissa = cond.max() / 10.0**exponent
+    (TABLES / "road_stats.tex").write_text(
+        f"\\newcommand{{\\roadcondmax}}{{{mantissa:.0f} \\times 10^{{{exponent}}}}}\n"
+        f"\\newcommand{{\\roadcohmax}}{{{coh_max:.4f}}}\n"
+        f"\\newcommand{{\\roadblockms}}{{{1000 * block_seconds:.0f}}}\n"
+        f"\\newcommand{{\\roadstatrejected}}{{{int(rejected.sum())}}}\n"
+        f"\\newcommand{{\\roadkurtmax}}{{{stats['kurtosis'].max():.2f}}}\n"
+        f"\\newcommand{{\\roadcrestmax}}{{{stats['crest'].max():.2f}}}\n"
+    )
 
 
 def fig_title_art():
@@ -457,6 +676,7 @@ def main():
         table_timing,
         fig_crest,
         fig_and_table_mimo,
+        fig_and_table_road,
         fig_title_art,
     ]:
         t0 = time.time()

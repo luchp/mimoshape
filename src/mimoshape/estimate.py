@@ -102,10 +102,32 @@ def estimate_moment_targets(y, index_tuples, weight=1.0):
     ]
 
 
+def random_phase_moment_ensemble(H, index_tuples, draws=64, rng=None):
+    """Ensemble mean and std of normalised moments under random phases.
+
+    Realisability pre-check for analytically prescribed targets (see the
+    paper's Feasibility paragraph): a target within a few ensemble standard
+    deviations of the mean is reached essentially for free, while a target
+    far outside requires substantial phase shaping and may be infeasible.
+    Returns ``(mean, std)`` arrays aligned with ``index_tuples``.
+    """
+    H = np.asarray(H, dtype=complex)
+    nj, _, nf = H.shape
+    rng = np.random.default_rng() if rng is None else rng
+    values = np.empty((draws, len(index_tuples)))
+    for d in range(draws):
+        phase = rng.uniform(-np.pi, np.pi, (nj, nf - 2))
+        x = moments.uvx(H, phase)[2]
+        values[d] = [moments.normalized_moment(x, tuple(idx)) for idx in index_tuples]
+    return np.mean(values, axis=0), np.std(values, axis=0)
+
+
 def signal_stats(x):
     """Per-channel summary statistics of a (multi-channel) signal.
 
     Returns a dict of arrays keyed by ``mean, std, skewness, kurtosis, crest``.
+    The crest factor is ``max|x - mean| / std``, the definition used
+    throughout the paper and in :func:`mimoshape.moments.oversampled_crest`.
     """
     x = np.atleast_2d(np.asarray(x, dtype=float))
     mean = np.mean(x, axis=1)
@@ -116,5 +138,5 @@ def signal_stats(x):
         "std": std,
         "skewness": np.mean(u**3, axis=1) / std**3,
         "kurtosis": np.mean(u**4, axis=1) / std**4,
-        "crest": (np.max(u, axis=1) - np.min(u, axis=1)) / std,
+        "crest": np.max(np.abs(u), axis=1) / std,
     }
