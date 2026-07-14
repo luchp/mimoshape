@@ -405,6 +405,9 @@ def fig_and_table_optimizer_comparison():
     ax_scale.set_ylabel("wall-clock per block (ms)")
     ax_scale.legend(fontsize=8)
     ax_scale.grid(alpha=0.4, which="both")
+    # force a draw to render the ticks
+    fig.canvas.draw()
+    ax_scale.set_xticks(ax_scale.get_xticks())  
     fig.tight_layout()
     fig.savefig(FIGURES / "optimizer_comparison.pdf")
     plt.close(fig)
@@ -603,7 +606,7 @@ def fig_crest():
             label=f"{label}, physical (8x)",
         )
     ax_beta.axhline(np.sqrt(2), color="k", linewidth=0.6, linestyle=":")
-    ax_beta.annotate(r"sine $\sqrt{2}$", (betas[0], np.sqrt(2)), fontsize=8,
+    ax_beta.annotate(r"sine $\sqrt{2}$", (betas[-2], np.sqrt(2)), fontsize=8,
                      textcoords="offset points", xytext=(2, 3))
     ax_beta.set_xlabel(r"surrogate stiffness $\beta$")
     ax_beta.set_ylabel(r"crest factor $\max|x|/\sigma$")
