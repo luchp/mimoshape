@@ -1,7 +1,7 @@
 # mimoshape
 
 Pure-NumPy optimization engine for the phase-domain synthesis of multi-channel (MIMO) signals
-that match match a prescribed Cross-Spectral Density (CSD) matrix while simultaneously optimizing 
+that match a prescribed Cross-Spectral Density (CSD) matrix while simultaneously optimizing 
 an arbitrary ensemble of user-definable, smooth memoryless functionals.
 
 The CSD is enforced structurally through a Cholesky factor `H`; the remaining
