@@ -69,11 +69,7 @@ uv run pytest
 
 MIT (code). The paper is licensed CC BY 4.0.
 
-## 📖 How to Cite
-
-If you use this framework or the `mimoshape` optimization engine in your research, please cite the published journal article:
-
-## 📖 How to Cite
+## How to Cite
 
 If you use this framework, the `mimoshape` repository, or the mathematical derivations in your research or software, please cite the companion paper:
 
