@@ -1,13 +1,17 @@
 # mimoshape
 
-Phase-domain synthesis of multi-channel (MIMO) signals that match a prescribed
-cross-spectral density (CSD) together with user-selected higher-order diagonal
-and joint moments (skewness, kurtosis, co-skewness, co-kurtosis), or
+Pure-NumPy optimization engine for the phase-domain synthesis of multi-channel (MIMO) signals
+that match match a prescribed Cross-Spectral Density (CSD) matrix while simultaneously optimizing 
+an arbitrary ensemble of user-definable, smooth memoryless functionals.
+
+Specific targets are included for higher-order diagonal and joint moments (skewness, kurtosis, co-skewness, co-kurtosis), and 
 directly minimised functionals such as a smooth crest-factor surrogate.
 
 The CSD is enforced structurally through a Cholesky factor `H`; the remaining
 phase degrees of freedom are optimised with analytic gradients (CCSAQ from
 NLopt). See `paper/sss.tex` for the full derivation.
+
+There are two live web applications where you try it yourself [Crest example](https://sensemagic.nl/app_mimoshape) [MIMO synthesis](https://sensemagic.nl/app_mimoshape_file)
 
 ## Layout
 
@@ -64,3 +68,29 @@ uv run pytest
 ## License
 
 MIT (code). The paper is licensed CC BY 4.0.
+
+## 📖 How to Cite
+
+If you use this framework or the `mimoshape` optimization engine in your research, please cite the published journal article:
+
+## 📖 How to Cite
+
+If you use this framework, the `mimoshape` repository, or the mathematical derivations in your research or software, please cite the companion paper:
+
+| Type | Reference |
+| :--- | :--- |
+| **APA** | Holtkamp, L. (2026). *Synthetic Signal Shaping: Analytic-gradient phase optimization for a target cross-spectral density and higher-order moments and cross-moments*. SenseMagic, Netherlands. |
+| **BibTeX** | See the code block below for the canonical database entry. |
+
+```bibtex
+@techreport{holtkamp2026synthetic,
+  author      = {Holtkamp, Luc},
+  title       = {Synthetic Signal Shaping: Phase Optimization over Cross-Spectral Density Constraints and Arbitrary Memoryless Functionals},
+  institution = {SenseMagic},
+  address     = {Netherlands},
+  year        = {2026},
+  note        = {Source code available at \url{https://github.com/luchp/mimoshape}},
+  url         = {https://github.com/luchp/mimoshape}
+}
+```
+
