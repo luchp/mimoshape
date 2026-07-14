@@ -9,11 +9,10 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.26",
     "scipy>=1.11",
-    "nlopt>=2.7",
 ]
 
 [project.optional-dependencies]
-examples = ["matplotlib"]
+examples = ["matplotlib", "nlopt>=2.7"]
 
 [dependency-groups]
 dev = ["pytest>=8"]

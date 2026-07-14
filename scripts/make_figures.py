@@ -16,6 +16,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import nlopt
+from scipy.optimize import minimize
 
 from mimoshape import estimate, moments, multimodel, stationarity
 from mimoshape.shaper import (
@@ -111,7 +113,7 @@ def fig_convergence():
     """Loss vs objective evaluation: feasible vs infeasible kurtosis target.
 
     The infeasible target (kurtosis 1.0, below the achievable floor) shows
-    CCSAQ descending smoothly onto the feasibility boundary; the residual
+    L-BFGS-B descending smoothly onto the feasibility boundary; the residual
     loss measures the infeasibility gap.  The kurtosis actually reached by
     the infeasible run is the empirical floor for this spectrum and is
     exported as the ``\\kurtfloor`` macro used by the paper.
@@ -135,6 +137,10 @@ def fig_convergence():
         )
         shaper.make_block()
         ax.semilogy(losses, style, linewidth=0.8, label=label)
+        if kurtosis == 5.0:
+            (TABLES / "convergence_stats.tex").write_text(
+                f"\\newcommand{{\\convergenceevals}}{{{len(losses)}}}\n"
+            )
         if kurtosis == 1.0:
             x = problem.signal(shaper.last_phase)
             floor = moments.normalized_moment(x, (0, 0, 0, 0))
@@ -274,6 +280,156 @@ def table_timing():
         r"\end{tabular}",
     ]
     (TABLES / "timing.tex").write_text("\n".join(lines) + "\n")
+
+
+class _StopEarly(Exception):
+    """Raised once the tracked loss drops below the matched stop threshold,
+    so scipy's optimisers halt on the same criterion as CCSAQ's ``stopval``."""
+
+
+def _scipy_minimize(problem, method, x0, stop_loss, record=None):
+    """Run ``scipy.optimize.minimize`` on ``problem`` with the identical
+    analytic loss/gradient CCSAQ uses, same box bounds, matched early stop."""
+    n = problem.num_free_phases
+
+    def fun(flat):
+        phase = flat.reshape(problem.num_channels, -1)
+        grad = np.empty_like(phase)
+        loss = problem.loss(phase, grad)
+        if record is not None:
+            record.append(loss)
+        if loss < stop_loss:
+            raise _StopEarly()
+        return loss, grad.ravel()
+
+    options = {"maxiter": 5000, "ftol": 1e-16}
+    if method == "L-BFGS-B":
+        options.update(gtol=1e-14, maxfun=20000)
+    try:
+        minimize(fun, x0, jac=True, method=method,
+                 bounds=[(-np.pi, np.pi)] * n, options=options)
+    except _StopEarly:
+        pass
+
+
+def _ccsaq_minimize(problem, x0, stop_loss, record=None):
+    """Run NLopt's CCSAQ directly (``MimoShaper`` now runs L-BFGS-B, so the
+    comparison talks to NLopt itself) with the same early-stop threshold and
+    per-evaluation loss tracking as ``_scipy_minimize``."""
+    n = problem.num_free_phases
+
+    def objective(flat_phase, flat_grad):
+        phase = flat_phase.reshape(problem.num_channels, -1)
+        if flat_grad.size > 0:
+            grad = np.empty_like(phase)
+            loss = problem.loss(phase, grad)
+            flat_grad[:] = grad.ravel()
+        else:
+            loss = problem.loss(phase)
+        if record is not None:
+            record.append(loss)
+        return loss
+
+    opt = nlopt.opt(nlopt.LD_CCSAQ, n)
+    opt.set_lower_bounds(np.full(n, -np.pi))
+    opt.set_upper_bounds(np.full(n, np.pi))
+    opt.set_min_objective(objective)
+    opt.set_maxtime(30)
+    opt.set_stopval(stop_loss)
+    opt.set_ftol_rel(1e-14)
+    opt.set_xtol_rel(1e-14)
+    opt.optimize(x0)
+
+
+def fig_and_table_optimizer_comparison():
+    """CCSAQ vs scipy's generic bound-constrained gradient optimisers.
+
+    The loss and its analytic gradient make no NLopt-specific assumption, so
+    the identical objective can be handed to any bound-constrained
+    gradient-based optimiser.  Left: loss vs evaluation for the reference
+    single-channel kurtosis-5 problem (one seed, matched early-stop
+    threshold).  Right: wall-clock time per block vs free-phase count,
+    log-log, averaged over independent seeds; the table gives the same
+    numbers together with evaluation counts.
+    """
+    stop_loss = 1e-10
+    methods = ["CCSAQ", "L-BFGS-B", "SLSQP"]
+    colours = {"CCSAQ": "C0", "L-BFGS-B": "C1", "SLSQP": "C2"}
+
+    def run(method, problem, x0, record):
+        if method == "CCSAQ":
+            _ccsaq_minimize(problem, x0, stop_loss, record=record)
+        else:
+            _scipy_minimize(problem, method, x0, stop_loss, record=record)
+
+    fig, (ax_conv, ax_scale) = plt.subplots(1, 2, figsize=(9, 3.4))
+
+    # --- left panel: convergence trace, one seed, reference problem ---
+    nt_ref = 2**12
+    x0_ref = np.random.default_rng(500).uniform(
+        -np.pi, np.pi, flat_siso_problem(nt_ref, 5.0).num_free_phases
+    )
+    for method in methods:
+        losses = []
+        run(method, flat_siso_problem(nt_ref, 5.0), x0_ref, losses)
+        ax_conv.semilogy(losses, colours[method], linewidth=0.9, label=method)
+    ax_conv.set_xlabel("objective evaluation")
+    ax_conv.set_ylabel(r"loss $\Xi$")
+    ax_conv.legend(fontsize=8)
+    ax_conv.grid(alpha=0.4, which="both")
+
+    # --- right panel + table: wall-clock scaling with free-phase count ---
+    nts = [2**8, 2**10, 2**12]
+    n_seeds = 8
+    stats = {}
+    for method in methods:
+        times_ms, mean_evals = [], []
+        for nt in nts:
+            times, evalcounts = [], []
+            for seed in range(n_seeds):
+                problem = flat_siso_problem(nt, 5.0)
+                x0 = np.random.default_rng(600 + seed).uniform(
+                    -np.pi, np.pi, problem.num_free_phases
+                )
+                losses = []
+                t0 = time.perf_counter()
+                run(method, problem, x0, losses)
+                times.append(time.perf_counter() - t0)
+                evalcounts.append(len(losses))
+            times_ms.append(1e3 * np.mean(times))
+            mean_evals.append(np.mean(evalcounts))
+        stats[method] = (times_ms, mean_evals)
+        free_phases = [nt // 2 - 1 for nt in nts]
+        ax_scale.loglog(free_phases, times_ms, colours[method] + "o-", label=method)
+    ax_scale.set_xlabel(r"free phases $N_t/2-1$")
+    ax_scale.set_ylabel("wall-clock per block (ms)")
+    ax_scale.legend(fontsize=8)
+    ax_scale.grid(alpha=0.4, which="both")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "optimizer_comparison.pdf")
+    plt.close(fig)
+
+    header2 = " & ".join(f"\\multicolumn{{2}}{{c}}{{$N_{{\\rm free}}={nt // 2 - 1}$}}" for nt in nts)
+    lines = [
+        r"\begin{tabular}{l r r r r r r}",
+        " & " + header2 + r" \\",
+        r"method & " + " & ".join(["ms/block & evals"] * len(nts)) + r" \\",
+        r"\hline",
+    ]
+    for method in methods:
+        times_ms, mean_evals = stats[method]
+        cells = " & ".join(f"{t:.1f} & {e:.0f}" for t, e in zip(times_ms, mean_evals))
+        lines.append(f"{method} & {cells} \\\\")
+    lines.append(r"\end{tabular}")
+    (TABLES / "optimizer_comparison.tex").write_text("\n".join(lines) + "\n")
+
+    slsqp_ratio = stats["SLSQP"][0][-1] / stats["CCSAQ"][0][-1]
+    lbfgsb_ratio = stats["CCSAQ"][1][-1] / stats["L-BFGS-B"][1][-1]
+    (TABLES / "optimizer_stats.tex").write_text(
+        f"\\newcommand{{\\slsqpratio}}{{{slsqp_ratio:.0f}}}\n"
+        f"\\newcommand{{\\lbfgsbratio}}{{{lbfgsb_ratio:.1f}}}\n"
+        f"\\newcommand{{\\optfreemax}}{{{nts[-1] // 2 - 1}}}\n"
+    )
 
 
 def mimo_blocks(problem, rng, num_blocks, **shaper_kwargs):
@@ -519,6 +675,20 @@ RETZLER_PUBLISHED = [
 ]
 
 
+def crest_of(x):
+    return np.max(np.abs(x)) / np.sqrt(np.mean(x**2))
+
+
+def multisine_H(nt, bins, amps):
+    nf = nt // 2 + 1
+    H = np.zeros((1, 1, nf), dtype=complex)
+    H[0, 0, bins] = 1.0 if amps is None else amps
+    return H
+
+
+CREST_BETAS = [5.0 * 2**k for k in range(10)]  # 5 .. 2560, doubled each stage
+
+
 def table_crest_benchmark():
     """Crest-factor benchmark on the five multisine setups of Retzler et al.
 
@@ -530,17 +700,8 @@ def table_crest_benchmark():
     """
     num_seeds = 25
     opts = dict(max_time=30.0, ftol_rel=1e-11, xtol_rel=0.0)
-    betas = [5.0 * 2**k for k in range(10)]  # 5 .. 2560
+    betas = CREST_BETAS
     ps = [2**k for k in range(2, 10)]  # 4 .. 512
-
-    def crest_of(x):
-        return np.max(np.abs(x)) / np.sqrt(np.mean(x**2))
-
-    def multisine_H(nt, bins, amps):
-        nf = nt // 2 + 1
-        H = np.zeros((1, 1, nf), dtype=complex)
-        H[0, 0, bins] = 1.0 if amps is None else amps
-        return H
 
     def lp_target(p):
         # |z|^p with exponent clipping so large p stays finite in float64
@@ -612,6 +773,111 @@ def table_crest_benchmark():
     (TABLES / "crest_bench_stats.tex").write_text(
         f"\\newcommand{{\\crestbenchseeds}}{{{num_seeds}}}\n"
         f"\\newcommand{{\\crestbenchtimes}}{{{min(times):.1f}--{max(times):.0f}}}\n"
+    )
+
+
+def _continuation_lbfgsb(H, seed, betas):
+    """Beta-continued crest surrogate via ``MimoShaper`` (L-BFGS-B), counting
+    loss evaluations spent across the whole ladder."""
+    rng = np.random.default_rng(seed)
+    phase = rng.uniform(-np.pi, np.pi, H.shape[2] - 2)
+    total_evals = 0
+    for beta in betas:
+        problem = SynthesisProblem(H, crests=[CrestTarget(0, beta=beta)])
+        count = [0]
+
+        def prog(loss):
+            count[0] += 1
+            return False
+
+        shaper = MimoShaper(problem, progress=prog, max_time=30.0,
+                             ftol_rel=1e-11, xtol_rel=0.0)
+        x = shaper.make_block(start=phase)
+        phase = shaper.last_phase
+        total_evals += count[0]
+    return crest_of(x[0]), total_evals
+
+
+def _continuation_ccsaq(H, seed, betas):
+    """Same beta continuation, but driving NLopt's CCSAQ directly (bypassing
+    ``MimoShaper``, which now runs L-BFGS-B), counting loss evaluations."""
+    rng = np.random.default_rng(seed)
+    n = H.shape[2] - 2
+    phase = rng.uniform(-np.pi, np.pi, n)
+    total_evals = 0
+    for beta in betas:
+        problem = SynthesisProblem(H, crests=[CrestTarget(0, beta=beta)])
+        count = [0]
+
+        def objective(flat_phase, flat_grad):
+            p = flat_phase.reshape(1, -1)
+            if flat_grad.size > 0:
+                grad = np.empty_like(p)
+                loss = problem.loss(p, grad)
+                flat_grad[:] = grad.ravel()
+            else:
+                loss = problem.loss(p)
+            count[0] += 1
+            return loss
+
+        opt = nlopt.opt(nlopt.LD_CCSAQ, n)
+        opt.set_lower_bounds(np.full(n, -np.pi))
+        opt.set_upper_bounds(np.full(n, np.pi))
+        opt.set_min_objective(objective)
+        opt.set_maxtime(30.0)
+        opt.set_ftol_rel(1e-11)
+        opt.set_xtol_rel(0.0)
+        phase = opt.optimize(phase)
+        total_evals += count[0]
+    x = problem.signal(phase.reshape(1, -1))
+    return crest_of(x[0]), total_evals
+
+
+def table_optimizer_beta_continuation():
+    """CCSAQ vs L-BFGS-B on the actual beta-continued crest surrogate.
+
+    Runs the identical continuation used above (same five Retzler multisine
+    setups, same beta ladder from 5 to 2560) with NLopt's CCSAQ swapped in
+    for comparison, reporting achieved crest and loss evaluations spent --
+    the evidence behind switching the package's default optimiser from
+    CCSAQ to L-BFGS-B.
+    """
+    num_seeds = 10
+
+    rows = []
+    ccsaq_evals, lbfgsb_evals = [], []
+    for name, (nt, bins, amps) in RETZLER_SETUPS.items():
+        H = multisine_H(nt, bins, amps)
+        cc_cf, cc_ev, lb_cf, lb_ev = [], [], [], []
+        for seed in range(num_seeds):
+            cf, ev = _continuation_ccsaq(H, seed, CREST_BETAS)
+            cc_cf.append(cf)
+            cc_ev.append(ev)
+            cf, ev = _continuation_lbfgsb(H, seed, CREST_BETAS)
+            lb_cf.append(cf)
+            lb_ev.append(ev)
+        ccsaq_evals.append(np.mean(cc_ev))
+        lbfgsb_evals.append(np.mean(lb_ev))
+        rows.append(
+            f"{name} & {np.mean(cc_cf):.4f} & {np.mean(cc_ev):.0f} & "
+            f"{np.mean(lb_cf):.4f} & {np.mean(lb_ev):.0f} \\\\"
+        )
+        print(f"  setup {name}: CCSAQ cf={np.mean(cc_cf):.4f} evals={np.mean(cc_ev):.0f}"
+              f"  L-BFGS-B cf={np.mean(lb_cf):.4f} evals={np.mean(lb_ev):.0f}")
+
+    lines = [
+        r"\begin{tabular}{l c c c c}",
+        r" & \multicolumn{2}{c}{CCSAQ} & \multicolumn{2}{c}{L-BFGS-B} \\",
+        r"setup & crest & evals & crest & evals \\",
+        r"\hline",
+        *rows,
+        r"\end{tabular}",
+    ]
+    (TABLES / "optimizer_beta_continuation.tex").write_text("\n".join(lines) + "\n")
+
+    reduction = np.mean(np.array(ccsaq_evals) / np.array(lbfgsb_evals))
+    (TABLES / "optimizer_beta_continuation_stats.tex").write_text(
+        f"\\newcommand{{\\betacontevalreduction}}{{{reduction:.0f}}}\n"
     )
 
 
@@ -917,6 +1183,8 @@ def main():
         fig_convergence,
         fig_restarts,
         table_timing,
+        fig_and_table_optimizer_comparison,
+        table_optimizer_beta_continuation,
         fig_crest,
         table_crest_benchmark,
         fig_and_table_mimo,

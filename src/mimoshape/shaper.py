@@ -2,14 +2,14 @@
 
 ``SynthesisProblem`` assembles the loss and analytic gradient from a target
 set (pure numerics, testable without an optimiser).  ``MimoShaper`` wires the
-problem into NLopt's CCSAQ and produces signal blocks.
+problem into scipy's L-BFGS-B and produces signal blocks.
 """
 
 import time
 from dataclasses import dataclass, field
 
 import numpy as np
-import nlopt
+from scipy.optimize import minimize
 
 from . import moments
 
@@ -210,8 +210,13 @@ class SynthesisProblem:
         return moments.uvx(self.H, phase)[2]
 
 
+class _StopEarly(Exception):
+    """Raised from the objective to unwind ``scipy.optimize.minimize`` once
+    the loss threshold, progress callback, or wall-clock budget fires."""
+
+
 class MimoShaper:
-    """Optimises the free phases of a ``SynthesisProblem`` with CCSAQ.
+    """Optimises the free phases of a ``SynthesisProblem`` with L-BFGS-B.
 
     ``progress`` is an optional callable ``progress(loss) -> bool``; returning
     True stops the optimisation.  Reporting stays out of the core numerics.
@@ -236,18 +241,21 @@ class MimoShaper:
         self.rng = np.random.default_rng() if rng is None else rng
         self.last_result = None
         self.last_phase = None
+        self._last_x = None
+        self._deadline = None
 
-    def _objective(self, flat_phase, flat_grad):
+    def _objective(self, flat_phase):
+        self._last_x = flat_phase
         phase = flat_phase.reshape(self.problem.num_channels, -1)
-        if flat_grad.size > 0:
-            grad = np.empty_like(phase)
-            loss = self.problem.loss(phase, grad)
-            flat_grad[:] = grad.ravel()
-        else:
-            loss = self.problem.loss(phase)
+        grad = np.empty_like(phase)
+        loss = self.problem.loss(phase, grad)
         if self.progress is not None and self.progress(loss):
-            raise nlopt.ForcedStop(1)
-        return loss
+            raise _StopEarly()
+        if loss < self.stop_loss:
+            raise _StopEarly()
+        if self._deadline is not None and time.perf_counter() > self._deadline:
+            raise _StopEarly()
+        return loss, grad.ravel()
 
     def make_block(self, start=None):
         """Optimise the free phases and return the time signal ``x`` of shape
@@ -263,17 +271,32 @@ class MimoShaper:
         else:
             start = np.asarray(start, dtype=float).reshape(n)
 
-        opt = nlopt.opt(nlopt.LD_CCSAQ, n)
-        opt.set_lower_bounds(np.full(n, -np.pi))
-        opt.set_upper_bounds(np.full(n, np.pi))
-        opt.set_min_objective(self._objective)
-        opt.set_maxtime(self.max_time)
-        opt.set_stopval(self.stop_loss)
-        opt.set_ftol_rel(self.ftol_rel)
-        opt.set_xtol_rel(self.xtol_rel)
+        self._deadline = (
+            None if self.max_time is None else time.perf_counter() + self.max_time
+        )
+        self._last_x = start
+        # ftol_rel maps directly onto scipy's relative function-value
+        # tolerance; xtol_rel has no exact scipy analogue for L-BFGS-B, so it
+        # is mapped onto the gradient-norm tolerance gtol (xtol_rel<=0, as
+        # used throughout this codebase to mean "disabled", falls back to
+        # scipy's default gtol).
+        options = {
+            "ftol": self.ftol_rel,
+            "gtol": self.xtol_rel if self.xtol_rel > 0 else 1e-10,
+            "maxiter": 1_000_000,
+            "maxfun": 2_000_000,
+        }
+        try:
+            result = minimize(
+                self._objective, start, jac=True, method="L-BFGS-B",
+                bounds=[(-np.pi, np.pi)] * n, options=options,
+            )
+            flat = result.x
+            self.last_result = result.status
+        except _StopEarly:
+            flat = self._last_x
+            self.last_result = 0
 
-        flat = opt.optimize(start)
-        self.last_result = opt.last_optimize_result()
         phase = flat.reshape(self.problem.num_channels, -1)
         self.last_phase = phase
         return self.problem.signal(phase)

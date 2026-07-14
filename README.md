@@ -5,8 +5,8 @@ that match a prescribed Cross-Spectral Density (CSD) matrix while simultaneously
 an arbitrary ensemble of user-definable, smooth memoryless functionals.
 
 The CSD is enforced structurally through a Cholesky factor `H`; the remaining
-phase degrees of freedom are optimised with analytic gradients (CCSAQ from
-NLopt). See `paper/sss.tex` for the full derivation.
+phase degrees of freedom are optimised with analytic gradients (scipy's
+L-BFGS-B). See `paper/sss.tex` for the full derivation.
 
 Specific targets are included for higher-order diagonal and joint moments (skewness, kurtosis, co-skewness, co-kurtosis), and 
 directly minimised functionals such as a smooth crest-factor surrogate.
@@ -16,7 +16,7 @@ There are two live web applications where you try it yourself: [Crest minimizer]
 ## Layout
 
 - `src/mimoshape/moments.py` — pure numerics: signals, moments, analytic gradients
-- `src/mimoshape/shaper.py` — target set, loss assembly, NLopt wiring
+- `src/mimoshape/shaper.py` — target set, loss assembly, scipy L-BFGS-B wiring
 - `src/mimoshape/estimate.py` — targets from measured records: multitaper CSD → Cholesky `H`, sample moments
 - `src/mimoshape/stationarity.py` — segment-statistic stationarity tests (reverse arrangements, runs)
 - `src/mimoshape/multimodel.py` — piecewise synthesis for non-stationary records: per-section models, block merging (crossfade / C1 / zero)
