@@ -403,15 +403,13 @@ def fig_and_table_optimizer_comparison():
         ax_scale.loglog(free_phases, times_ms, colours[method] + "o-", label=method)
     ax_scale.set_xlabel(r"free phases $N_t/2-1$")
     ax_scale.set_ylabel("wall-clock per block (ms)")
+    ax_scale.tick_params(axis='x', which="both", labelrotation=30)
     ax_scale.legend(fontsize=8)
     ax_scale.grid(alpha=0.4, which="both")
-    # force a draw to render the ticks
-    fig.canvas.draw()
-    ax_scale.set_xticks(ax_scale.get_xticks())  
     fig.tight_layout()
     fig.savefig(FIGURES / "optimizer_comparison.pdf")
     plt.close(fig)
-
+   
     header2 = " & ".join(f"\\multicolumn{{2}}{{c}}{{$N_{{\\rm free}}={nt // 2 - 1}$}}" for nt in nts)
     lines = [
         r"\begin{tabular}{l r r r r r r}",
