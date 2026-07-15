@@ -64,6 +64,11 @@ for beta in (5, 10, 20, 40, 80, 160):
 uv sync --group dev
 uv run pytest
 ```
+## Generate figures and tables from paper
+
+```
+uv run --extra examples scripts\make_figures.py 
+```
 
 ## License
 
@@ -71,22 +76,34 @@ MIT (code). The paper is licensed CC BY 4.0.
 
 ## How to Cite
 
-If you use this framework, the `mimoshape` repository, or the mathematical derivations in your research or software, please cite the companion paper:
+If you use the paper, cite the preprint / paper:
 
-| Type | Reference |
-| :--- | :--- |
-| **APA** | Holtkamp, L. (2026). *Synthetic Signal Shaping: Analytic-gradient phase optimization for a target cross-spectral density and higher-order moments and cross-moments*. SenseMagic, Netherlands. |
-| **BibTeX** | See the code block below for the canonical database entry. |
+Holtkamp, L. (2026). *Synthetic Signal Shaping: Analytic‑gradient Phase Optimization over Cross‑Spectral Density Constraints and Arbitrary Memoryless Functionals*. SenseMagic. DOI: REPLACE_WITH_OSF_DOI
 
-```bibtex
+If you use the code, cite the software release:
+
+Holtkamp, L. (2026). mimoshape (v1.2) [software]. Zenodo. DOI: REPLACE_WITH_ZENODO_DOI
+
+### BibTeX (paper)
 @techreport{holtkamp2026synthetic,
   author      = {Holtkamp, Luc},
   title       = {Synthetic Signal Shaping: Analytic-gradient Phase Optimization over Cross-Spectral Density Constraints and Arbitrary Memoryless Functionals},
   institution = {SenseMagic},
   address     = {Netherlands},
   year        = {2026},
-  note        = {Source code available at \url{https://github.com/luchp/mimoshape}},
+  doi         = {REPLACE_WITH_OSF_DOI},  
+  note        = {Source code available at https://github.com/luchp/mimoshape},
   url         = {https://github.com/luchp/mimoshape}
 }
-```
+
+### BibTeX (software)
+@software{holtkamp_mimoshape_2026,
+  author    = {Holtkamp, Luc},
+  title     = {mimoshape},
+  version   = {v1.2},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {REPLACE_WITH_ZENODO_DOI},
+  url       = {https://github.com/luchp/mimoshape}
+}
 

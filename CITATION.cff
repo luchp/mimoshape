@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "mimoshape: Synthetic Signal Shaping"
+version: "v1.2"
+date-released: "2026-07-15"
+authors:
+  - family-names: "Holtkamp"
+    given-names: "Luc"
+    affiliation: "SenseMagic"
+identifiers:
+  - type: url
+    value: "https://github.com/luchp/mimoshape"
+license: "MIT"
+abstract: "Reference implementation for analytic-gradient phase optimization to synthesize multi-channel signals matching prescribed CSD and higher-order moments."
+keywords:
+  - "signal processing"
+  - "cross-spectral density"
+  - "MIMO"
+  - "phase optimization"
