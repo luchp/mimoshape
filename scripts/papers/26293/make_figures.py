@@ -41,29 +41,13 @@ META_DIR = PAPER_DIR / "meta"
 DATA_DIR = BASEDIR / "data"
 ROAD_NPZ = DATA_DIR/ "roadsection_220s_300hz.npz"
 PAPER_METADATA_FILE = SCRIPT_DIR / "metadata.json"
+SITE_METADATA_FILE = BASEDIR / "scripts" / "metadata.json"
 
 # Add scripts dir to path for file_utils import
 sys.path.insert(0, str(BASEDIR / "scripts"))
-from file_utils import OpenWriteChecked
+from file_utils import save_figure_checked, write_text_checked
 
-def save_figure_checked(fig, path, **kwargs):
-    """Save figure only if content changed.
-    Make sure that this is idempotent by eliminating metadata
-    """
-    kwargs["metadata"] = {
-        'CreationDate': None,
-        'ModDate': None,
-        'ID': None
-    }
-    with OpenWriteChecked(path) as f:
-        fig.savefig(f.fn_tmp, **kwargs)
-    return f.equal
 
-def write_text_checked(path, content):
-    """Write text only if content changed."""
-    with OpenWriteChecked(path) as f:
-        f.open_file.write(content)
-    return f.equal
 
 MIMO_TUPLES = [(0, 0, 0), (1, 1, 1), (0, 0, 0, 0), (1, 1, 1, 1), (0, 0, 1, 1)]
 TUPLE_LABELS = {
@@ -75,22 +59,33 @@ TUPLE_LABELS = {
 }
 
 def write_metadata():
+
+
+
+    with open(SITE_METADATA_FILE) as f:
+        smeta = json.load(f)
     with open(PAPER_METADATA_FILE) as f:
-        meta = json.load(f)
+        ameta = json.load(f)
+    author = f"{smeta['author_given_names']} {smeta['author_family_names']}"
     write_text_checked(
         META_DIR / "metadata.tex",
         f"""% Auto-generated DO NOT EDIT
     \\usepackage[
-        pdfauthor={{{meta['author']}}},
-        pdftitle={{{meta['title']} v{meta['version']}}},
-        pdfsubject={{{meta['summary']}}},
-        pdfkeywords={{{meta['keywords']}}},
+        pdfauthor={{{author}}},
+        pdftitle={{{ameta['title']} v{ameta['version']}}},
+        pdfsubject={{{ameta['summary']}}},
+        pdfkeywords={{{ameta['keywords']}}},
     ]{{hyperref}}
     
-    \\newcommand{{\\PaperTitle}}{{{meta['title']}}}
-    \\newcommand{{\\PaperVersion}}{{v{meta['version']}}}
-    \\newcommand{{\\PaperAuthor}}{{{meta['author']}}}
-    \\newcommand{{\\PaperSummary}}{{{meta['summary']}}}
+    \\newcommand{{\\PaperTitle}}{{{ameta['title']}}}
+    \\newcommand{{\\PaperVersion}}{{v{ameta['version']}}}
+    \\newcommand{{\\PaperAuthor}}{{{author}}}
+    \\newcommand{{\\PaperSummary}}{{{ameta['summary']}}}
+    \\newcommand{{\PaperCopyright}}{{{smeta['copyright']}}}
+    \\newcommand{{\PaperLicense}}{{{ameta['license'] }}}
+    \\newcommand{{\PaperEmail}}{{{smeta['email']}}}
+    \\newcommand{{\PaperWebsite}}{{{smeta['website']}}}
+    \\newcommand{{\PaperAfiliation}}{{{smeta['affiliation']}}}
     """
     )
 

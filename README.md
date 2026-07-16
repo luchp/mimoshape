@@ -76,21 +76,6 @@ MIT (code). The paper is licensed CC BY 4.0.
 
 ## How to Cite
 
-If you use the paper, or code, cite the preprint / paper:
-
-Holtkamp, L. (2026). *Synthetic Signal Shaping: Analytic‑gradient Phase Optimization over Cross‑Spectral Density Constraints and Arbitrary Memoryless Functionals*. SenseMagic. DOI: REPLACE_WITH_DOI
-
-### BibTeX (paper)
-@techreport{holtkamp2026synthetic,
-  author      = {Holtkamp, Luc},
-  title       = {Synthetic Signal Shaping: Analytic-gradient Phase Optimization over Cross-Spectral Density Constraints and Arbitrary Memoryless Functionals},
-  institution = {SenseMagic},
-  address     = {Netherlands},
-  year        = {2026},
-  doi         = {REPLACE_WITH_DOI},  
-  note        = {Source code available at https://github.com/luchp/mimoshape},
-  url         = {https://github.com/luchp/mimoshape}
-}
-
+See CITATION.cff 
 
 

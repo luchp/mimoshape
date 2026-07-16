@@ -37,3 +37,15 @@ class OpenWriteChecked:
         self.equal = equal
         return None
 
+def save_figure_checked(fig, path, **kwargs):
+    """Save figure only if content changed.
+    """
+    with OpenWriteChecked(path) as f:
+        fig.savefig(f.fn_tmp, **kwargs)
+    return f.equal
+
+def write_text_checked(path, content):
+    """Write text only if content changed."""
+    with OpenWriteChecked(path) as f:
+        f.open_file.write(content)
+    return f.equal

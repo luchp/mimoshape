@@ -144,9 +144,10 @@ def normalize_keywords(value: Any, source: Path) -> list[str]:
     return keywords
 
 def load_platform_metadata():
+    uvv =  run_checked(["uv", "--version"], cwd=REPO_ROOT)
     return PlatformMetadata(
         python_version=platform.python_version(),
-        uv_version=run_checked(["uv", "--version"], cwd=REPO_ROOT),
+        uv_version=uvv.split()[1],
         os_version=f"{platform.system()} {platform.release()} ({platform.machine()})",
     )
 
