@@ -63,6 +63,7 @@ def test_load_code_metadata_accepts_list_keywords(tmp_path: Path):
             "{"
             '"title":"t","summary":"s","repository":"o/r",'
             '"author_given_names":"a","author_family_names":"b","affiliation":"c",'
+            '"copyright":"c 2026","email":"a@b.c","website":"www.example.com",'
             '"keywords":["k1","k2"],"license":"MIT","message":"m","version":"1.0"'
             "}"
         ),

@@ -285,14 +285,50 @@ def github_request(
     return status, payload_dict
 
 
+def github_get_json(url: str, *, token: str) -> tuple[int, Any]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "python-urllib",
+    }
+    req = urllib.request.Request(url, method="GET", headers=headers)
+    try:
+        with urllib.request.urlopen(req) as response:
+            status = response.status
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        if exc.code == 404:
+            return 404, None
+        raise ReleaseAbort(f"GitHub API GET {url} failed ({exc.code}): {raw}") from exc
+    return status, (json.loads(raw) if raw else None)
+
+
 def github_release_exists(repository: str, tag: str, token: str) -> bool:
-    url = f"https://api.github.com/repos/{repository}/releases/tags/{urllib.parse.quote(tag)}"
-    status, _ = github_request("GET", url, token=token)
-    if status == 404:
-        return False
-    if status != 200:
-        raise ReleaseAbort(f"Unexpected status while checking release for tag {tag}: {status}")
-    return True
+    # The /releases/tags/{tag} endpoint has been observed returning server-side
+    # 503s, so page through the (reliable) list endpoint and match on tag_name.
+    page = 1
+    while True:
+        url = (
+            f"https://api.github.com/repos/{repository}/releases"
+            f"?per_page=100&page={page}"
+        )
+        status, data = github_get_json(url, token=token)
+        if status == 404:
+            return False
+        if status != 200:
+            raise ReleaseAbort(
+                f"Unexpected status while listing releases for {repository}: {status}"
+            )
+        if not isinstance(data, list) or not data:
+            return False
+        for release in data:
+            if isinstance(release, dict) and release.get("tag_name") == tag:
+                return True
+        if len(data) < 100:
+            return False
+        page += 1
 
 
 def collect_release_state(
