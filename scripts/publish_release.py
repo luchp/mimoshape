@@ -509,6 +509,10 @@ def ensure_required_tools() -> None:
         if result.returncode != 0:
             raise ReleaseAbort(f"Required tool is not available: {tool}")
 
+def load_secrets():
+    with open(SCRIPTS_DIR / "secrets.json") as f:
+        secrets = json.load(f)
+    return secrets
 
 def main() -> None:
     args = parse_args()
@@ -529,7 +533,8 @@ def main() -> None:
     if not paper_script.is_file():
         raise ReleaseAbort(f"Missing paper figure script: {paper_script}")
 
-    token = os.environ.get("GITHUB_TOKEN")
+    secrets = load_secrets()
+    token = secrets["GITHUB_TOKEN"]
     if not token:
         raise ReleaseAbort("GITHUB_TOKEN must be set to check release existence safely.")
 
