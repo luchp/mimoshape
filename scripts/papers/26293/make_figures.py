@@ -11,6 +11,7 @@ Outputs land in paper/figures/*.pdf and paper/tables/*.tex.
 import pathlib
 import time
 import json
+import sys
 
 import numpy as np
 import matplotlib
@@ -41,6 +42,21 @@ DATA_DIR = BASEDIR / "data"
 ROAD_NPZ = DATA_DIR/ "roadsection_220s_300hz.npz"
 PAPER_METADATA_FILE = SCRIPT_DIR / "metadata.json"
 
+# Add scripts dir to path for file_utils import
+sys.path.insert(0, str(BASEDIR / "scripts"))
+from file_utils import OpenWriteChecked
+
+def save_figure_checked(fig, path, **kwargs):
+    """Save figure only if content changed."""
+    with OpenWriteChecked(path) as f:
+        fig.savefig(f.fn_tmp, **kwargs)
+    return f.equal
+
+def write_text_checked(path, content):
+    """Write text only if content changed."""
+    with OpenWriteChecked(path) as f:
+        f.open_file.write(content)
+
 MIMO_TUPLES = [(0, 0, 0), (1, 1, 1), (0, 0, 0, 0), (1, 1, 1, 1), (0, 0, 1, 1)]
 TUPLE_LABELS = {
     (0, 0, 0): r"skewness ch.\,0",
@@ -53,8 +69,9 @@ TUPLE_LABELS = {
 def write_metadata():
     with open(PAPER_METADATA_FILE) as f:
         meta = json.load(f)
-    with open(PAPER_DIR / "metadata.tex", "w") as f:
-        f.write(f"""% Auto-generated — DO NOT EDIT
+    write_text_checked(
+        PAPER_DIR / "metadata.tex",
+        f"""% Auto-generated — DO NOT EDIT
     \\usepackage[
         pdfauthor={{{meta['author']}}},
         pdftitle={{{meta['title']} v{meta['version']}}},
@@ -66,7 +83,8 @@ def write_metadata():
     \\newcommand{{\\PaperVersion}}{{v{meta['version']}}}
     \\newcommand{{\\PaperAuthor}}{{{meta['author']}}}
     \\newcommand{{\\PaperSummary}}{{{meta['summary']}}}
-    """)
+    """
+    )
 
 
 def flat_siso_problem(nt, kurtosis, endpoint=True):
@@ -130,7 +148,7 @@ def fig_siso_block():
         ax.grid(alpha=0.4)
     axes[1].set_xlabel("sample")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "siso_block.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "siso_block.pdf")
     plt.close(fig)
 
 
@@ -163,13 +181,13 @@ def fig_convergence():
         shaper.make_block()
         ax.semilogy(losses, style, linewidth=0.8, label=label)
         if kurtosis == 5.0:
-            (TABLES_DIR / "convergence_stats.tex").write_text(
+            write_text_checked(TABLES_DIR / "convergence_stats.tex", 
                 f"\\newcommand{{\\convergenceevals}}{{{len(losses)}}}\n"
             )
         if kurtosis == 1.0:
             x = problem.signal(shaper.last_phase)
             floor = moments.normalized_moment(x, (0, 0, 0, 0))
-            (TABLES_DIR / "kurt_floor.tex").write_text(
+            write_text_checked(TABLES_DIR / "kurt_floor.tex", 
                 f"\\newcommand{{\\kurtfloor}}{{{floor:.2f}}}\n"
             )
     ax.set_xlabel("objective evaluation")
@@ -177,7 +195,7 @@ def fig_convergence():
     ax.legend(fontsize=8)
     ax.grid(alpha=0.4, which="both")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "convergence.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "convergence.pdf")
     plt.close(fig)
 
 
@@ -204,9 +222,9 @@ def fig_restarts():
     ax.set_ylabel("restarts")
     ax.grid(alpha=0.4)
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "restarts.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "restarts.pdf")
     plt.close(fig)
-    (TABLES_DIR / "restart_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "restart_stats.tex", 
         f"median $10^{{{np.median(np.log10(finals)):.1f}}}$, "
         f"worst $10^{{{np.max(np.log10(finals)):.1f}}}$\n"
     )
@@ -293,7 +311,7 @@ def table_timing():
     slope = np.polyfit(
         np.log([nj for nj, _ in scaling]), np.log([ms for _, ms in scaling]), 1
     )[0]
-    (TABLES_DIR / "timing_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "timing_stats.tex", 
         f"\\newcommand{{\\scalingslope}}{{{slope:.2f}}}\n"
     )
 
@@ -304,7 +322,7 @@ def table_timing():
         *rows,
         r"\end{tabular}",
     ]
-    (TABLES_DIR / "timing.tex").write_text("\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "timing.tex", "\n".join(lines) + "\n")
 
 
 class _StopEarly(Exception):
@@ -432,7 +450,7 @@ def fig_and_table_optimizer_comparison():
     ax_scale.legend(fontsize=8)
     ax_scale.grid(alpha=0.4, which="both")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "optimizer_comparison.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "optimizer_comparison.pdf")
     plt.close(fig)
    
     header2 = " & ".join(f"\\multicolumn{{2}}{{c}}{{$N_{{\\rm free}}={nt // 2 - 1}$}}" for nt in nts)
@@ -447,11 +465,11 @@ def fig_and_table_optimizer_comparison():
         cells = " & ".join(f"{t:.1f} & {e:.0f}" for t, e in zip(times_ms, mean_evals))
         lines.append(f"{method} & {cells} \\\\")
     lines.append(r"\end{tabular}")
-    (TABLES_DIR / "optimizer_comparison.tex").write_text("\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "optimizer_comparison.tex", "\n".join(lines) + "\n")
 
     slsqp_ratio = stats["SLSQP"][0][-1] / stats["CCSAQ"][0][-1]
     lbfgsb_ratio = stats["CCSAQ"][1][-1] / stats["L-BFGS-B"][1][-1]
-    (TABLES_DIR / "optimizer_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "optimizer_stats.tex", 
         f"\\newcommand{{\\slsqpratio}}{{{slsqp_ratio:.0f}}}\n"
         f"\\newcommand{{\\lbfgsbratio}}{{{lbfgsb_ratio:.1f}}}\n"
         f"\\newcommand{{\\optfreemax}}{{{nts[-1] // 2 - 1}}}\n"
@@ -484,7 +502,7 @@ def fig_and_table_mimo():
         ax.grid(alpha=0.4)
     axes[1].set_xlabel("sample")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "mimo_traces.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "mimo_traces.pdf")
     plt.close(fig)
 
     # --- moment table (achieved mean and spread over the block ensemble)
@@ -501,7 +519,7 @@ def fig_and_table_mimo():
             f"{np.mean(vals):.3f} $\\pm$ {np.std(vals):.3f} \\\\"
         )
     lines.append(r"\end{tabular}")
-    (TABLES_DIR / "mimo_moments.tex").write_text("\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "mimo_moments.tex", "\n".join(lines) + "\n")
 
     # --- CSD reproduction: estimate the synthesised ensemble with the *same*
     # multitaper estimator used for the record, so both sides carry comparable
@@ -546,7 +564,7 @@ def fig_and_table_mimo():
         ax.grid(alpha=0.4)
     fig.tight_layout()
     fig.subplots_adjust(hspace=0.35)  # review: keep tick labels legible
-    fig.savefig(FIGURES_DIR / "csd_match.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "csd_match.pdf")
     plt.close(fig)
 
 
@@ -644,14 +662,14 @@ def fig_crest():
     )
     ax_block.grid(alpha=0.4)
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "crest_beta.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "crest_beta.pdf")
     plt.close(fig)
 
     # seed-averaged headline numbers at the final beta, quoted in the paper
     full_d, full_c, full_p, full_k = results["full spectrum"]
     _, half_c, half_p, _ = results["half band"]
     _, _, taper_p, _ = results["half band, 10% taper"]
-    (TABLES_DIR / "crest_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "crest_stats.tex", 
         f"\\newcommand{{\\crestfullsampled}}{{{full_c[:, -1].mean():.2f}}}\n"
         f"\\newcommand{{\\crestfulldirect}}{{{full_d[:, -1].mean():.2f}}}\n"
         f"\\newcommand{{\\crestfullphysical}}{{{full_p[:, -1].mean():.2f}}}\n"
@@ -795,8 +813,8 @@ def table_crest_benchmark():
         *our_rows,
         r"\end{tabular}",
     ]
-    (TABLES_DIR / "crest_benchmark.tex").write_text("\n".join(lines) + "\n")
-    (TABLES_DIR / "crest_bench_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "crest_benchmark.tex", "\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "crest_bench_stats.tex", 
         f"\\newcommand{{\\crestbenchseeds}}{{{num_seeds}}}\n"
         f"\\newcommand{{\\crestbenchtimes}}{{{min(times):.1f}--{max(times):.0f}}}\n"
     )
@@ -899,10 +917,10 @@ def table_optimizer_beta_continuation():
         *rows,
         r"\end{tabular}",
     ]
-    (TABLES_DIR / "optimizer_beta_continuation.tex").write_text("\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "optimizer_beta_continuation.tex", "\n".join(lines) + "\n")
 
     reduction = np.mean(np.array(ccsaq_evals) / np.array(lbfgsb_evals))
-    (TABLES_DIR / "optimizer_beta_continuation_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "optimizer_beta_continuation_stats.tex", 
         f"\\newcommand{{\\betacontevalreduction}}{{{reduction:.0f}}}\n"
     )
 
@@ -970,7 +988,7 @@ def fig_and_table_road():
             f"{kurt.value:.3f} & {ach(kurt.indices)} \\\\"
         )
     lines.append(r"\end{tabular}")
-    (TABLES_DIR / "road_moments.tex").write_text("\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "road_moments.tex", "\n".join(lines) + "\n")
 
     lines = [
         r"\begin{tabular}{l r r}",
@@ -984,7 +1002,7 @@ def fig_and_table_road():
             f"{t.value:.3f} & {ach(t.indices)} \\\\"
         )
     lines.append(r"\end{tabular}")
-    (TABLES_DIR / "road_cokurt.tex").write_text("\n".join(lines) + "\n")
+    write_text_checked(TABLES_DIR / "road_cokurt.tex", "\n".join(lines) + "\n")
 
     # --- traces: measured excerpt vs one synthesised block, extreme channels
     shown = [names.index("FZMRHL"), names.index("MZMRHL")]
@@ -1002,7 +1020,7 @@ def fig_and_table_road():
     for col in (0, 1):
         axes[1, col].set_xlabel("time [s]")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "road_traces.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "road_traces.pdf")
     plt.close(fig)
 
     # --- CSD reproduction for the most coherent physical pair (FZ left/right)
@@ -1036,7 +1054,7 @@ def fig_and_table_road():
         ax.grid(alpha=0.4)
     fig.tight_layout()
     fig.subplots_adjust(hspace=0.35)
-    fig.savefig(FIGURES_DIR / "road_csd.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "road_csd.pdf")
     plt.close(fig)
 
     # --- generated statistics quoted in the text (no manual transcription)
@@ -1055,7 +1073,7 @@ def fig_and_table_road():
     stats = estimate.signal_stats(record)
     exponent = int(np.floor(np.log10(cond.max())))
     mantissa = cond.max() / 10.0**exponent
-    (TABLES_DIR / "road_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "road_stats.tex", 
         f"\\newcommand{{\\roadcondmax}}{{{mantissa:.0f} \\times 10^{{{exponent}}}}}\n"
         f"\\newcommand{{\\roadcohmax}}{{{coh_max:.4f}}}\n"
         f"\\newcommand{{\\roadblockms}}{{{1000 * block_seconds:.0f}}}\n"
@@ -1146,13 +1164,13 @@ def fig_and_table_multimodel():
     ax_ms.legend(fontsize=8)
     ax_ms.grid(alpha=0.4, which="both")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "multimodel.pdf")
+    save_figure_checked(fig, FIGURES_DIR / "multimodel.pdf")
     plt.close(fig)
 
     rec_q, rec_r = half_kurtosis(record)
     mm_q, mm_r = half_kurtosis(multi.merged)
     sg_q, sg_r = half_kurtosis(single.merged)
-    (TABLES_DIR / "multimodel_stats.tex").write_text(
+    write_text_checked(TABLES_DIR / "multimodel_stats.tex", 
         f"\\newcommand{{\\mmzrecord}}{{{ra_z(record):.1f}}}\n"
         f"\\newcommand{{\\mmzmulti}}{{{ra_z(multi.merged):.1f}}}\n"
         f"\\newcommand{{\\mmzsingle}}{{{ra_z(single.merged):.1f}}}\n"
@@ -1197,7 +1215,7 @@ def fig_title_art():
                 solid_capstyle="round")
     ax.set_axis_off()
     fig.tight_layout(pad=0)
-    fig.savefig(FIGURES_DIR / "title_art.pdf", bbox_inches="tight", pad_inches=0.05)
+    save_figure_checked(fig, FIGURES_DIR / "title_art.pdf", bbox_inches="tight", pad_inches=0.05)
     plt.close(fig)
 
 
@@ -1233,3 +1251,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
