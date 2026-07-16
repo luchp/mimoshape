@@ -263,6 +263,7 @@ def github_request(
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
         "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "python-urllib",
     }
     body: bytes | None = None
     if payload is not None:
