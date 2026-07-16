@@ -1,0 +1,10 @@
+{
+  "texmain": "sss.tex",
+  "title": "Synthetic Signal Shaping",
+  "version": "1.2",
+  "author": "Luc Holtkamp",
+  "summary": "Phase-domain synthesis of MIMO signals with target CSD and higher-order (cross-)moments",
+  "keywords": "DSP, shaping, synthetic signals",
+  "year": "2026",
+  "repository": "luchp/mimoshape"
+}

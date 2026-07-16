@@ -76,13 +76,9 @@ MIT (code). The paper is licensed CC BY 4.0.
 
 ## How to Cite
 
-If you use the paper, cite the preprint / paper:
+If you use the paper, or code, cite the preprint / paper:
 
-Holtkamp, L. (2026). *Synthetic Signal Shaping: Analytic‑gradient Phase Optimization over Cross‑Spectral Density Constraints and Arbitrary Memoryless Functionals*. SenseMagic. DOI: REPLACE_WITH_OSF_DOI
-
-If you use the code, cite the software release:
-
-Holtkamp, L. (2026). mimoshape (v1.2) [software]. Zenodo. DOI: REPLACE_WITH_ZENODO_DOI
+Holtkamp, L. (2026). *Synthetic Signal Shaping: Analytic‑gradient Phase Optimization over Cross‑Spectral Density Constraints and Arbitrary Memoryless Functionals*. SenseMagic. DOI: REPLACE_WITH_DOI
 
 ### BibTeX (paper)
 @techreport{holtkamp2026synthetic,
@@ -91,19 +87,10 @@ Holtkamp, L. (2026). mimoshape (v1.2) [software]. Zenodo. DOI: REPLACE_WITH_ZENO
   institution = {SenseMagic},
   address     = {Netherlands},
   year        = {2026},
-  doi         = {REPLACE_WITH_OSF_DOI},  
+  doi         = {REPLACE_WITH_DOI},  
   note        = {Source code available at https://github.com/luchp/mimoshape},
   url         = {https://github.com/luchp/mimoshape}
 }
 
-### BibTeX (software)
-@software{holtkamp_mimoshape_2026,
-  author    = {Holtkamp, Luc},
-  title     = {mimoshape},
-  version   = {v1.2},
-  year      = {2026},
-  publisher = {Zenodo},
-  doi       = {REPLACE_WITH_ZENODO_DOI},
-  url       = {https://github.com/luchp/mimoshape}
-}
+
 

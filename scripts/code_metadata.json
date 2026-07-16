@@ -1,0 +1,17 @@
+{
+  "title": "mimoshape: Synthetic Signal Shaping",
+  "summary": "Reference implementation for analytic-gradient phase optimization to synthesize multi-channel signals matching prescribed CSD and higher-order moments.",
+  "repository": "luchp/mimoshape",
+  "author_given_names": "Luc",
+  "author_family_names": "Holtkamp",
+  "affiliation": "SenseMagic",
+  "keywords": [
+    "signal processing",
+    "cross-spectral density",
+    "MIMO",
+    "phase optimization"
+  ],
+  "license": "MIT",
+  "message": "If you use this software, please cite it as below.",
+  "version": "1.2"
+}

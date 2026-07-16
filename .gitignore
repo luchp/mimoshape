@@ -4,6 +4,8 @@ __pycache__/
 dist/
 .pytest_cache/
 uv.lock
+# secrets
+scripts/secrets.json
 # LaTeX build artefacts
 paper/*.aux
 paper/*.bbl

@@ -1,10 +1,11 @@
 [project]
 name = "mimoshape"
-version = "0.1.0"
-description = "Phase-domain synthesis of MIMO signals with target CSD and higher-order (cross-)moments"
+version = "0.0.0"
+description = ""
+authors = []
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "Luc Holtkamp", email = "luc@sensemagic.nl" }]
+
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.26",
@@ -13,6 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 examples = ["matplotlib", "nlopt>=2.7"]
+release = ["PyPDF2", "PyGithub", "tomli_w"]
 
 [dependency-groups]
 dev = ["pytest>=8"]
@@ -26,3 +28,23 @@ packages = ["src/mimoshape"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# Build figures and tables from paper
+[tool.hatch.envs.figures]
+features = ["examples"]
+
+[tool.hatch.envs.figures.scripts]
+run = "python scripts/make_figures.py"
+
+# Build release for paper
+[tool.hatch.envs.release]
+features = ["examples", "release"]
+
+[tool.hatch.envs.release.scripts]
+run = "python scripts/publish_release.py"
+
+# the papers
+[tool.hatch.envs.26293.scripts]
+figures = "hatch run figures -- -p 26293"
+release = "hatch run release -- -p 26293"
+
