@@ -23,6 +23,14 @@ CODE_METADATA_FILE = SCRIPTS_DIR / "code_metadata.json"
 class ReleaseAbort(RuntimeError):
     """Raised when release preconditions are not met."""
 
+import platform
+import subprocess
+
+@dataclass(frozen=True)
+class PlatformMetadata:
+    python_version: str
+    uv_version: str
+    os_version: str
 
 @dataclass(frozen=True)
 class CodeMetadata:
@@ -66,7 +74,6 @@ class PublishActions:
     push_paper_tag: bool
     create_paper_release: bool
     upload_assets: bool
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and publish a paper release")
@@ -136,6 +143,12 @@ def normalize_keywords(value: Any, source: Path) -> list[str]:
         raise ReleaseAbort(f"Metadata field 'keywords' must not be empty in {source}")
     return keywords
 
+def load_platform_metadata():
+    return PlatformMetadata(
+        python_version=platform.python_version(),
+        uv_version=run_checked(["uv", "--version"], cwd=REPO_ROOT),
+        os_version=f"{platform.system()} {platform.release()} ({platform.machine()})",
+    )
 
 def load_code_metadata(path: Path, code_version_override: str | None) -> CodeMetadata:
     data = load_json(path)
@@ -433,6 +446,7 @@ def write_citation_cff(code: CodeMetadata, released_at: datetime) -> Path:
 
 def write_provenance(
     *,
+    platfrm: PlatformMetadata,
     paper: PaperMetadata,
     code_tag: str,
     paper_tag: str,
@@ -454,6 +468,9 @@ def write_provenance(
         f"built_utc: {released_at.isoformat()}\n"
         f"build_command: {' '.join(command)}\n"
         f"paper_pdf: {pdf_path.relative_to(REPO_ROOT)}\n"
+        f"python: {platfrm.python_version}\n"
+        f"uv: {platfrm.uv_version}\n"
+        f"os: {platfrm.os_version}\n"
     )
     path.write_text(body, encoding="utf-8")
     return path
@@ -548,6 +565,7 @@ def main() -> None:
     print(f"Current commit: {commit}", flush=True)
 
     print("Loading metadata...", flush=True)
+    platfrm = load_platform_metadata()
     code = load_code_metadata(CODE_METADATA_FILE, args.code_version)
     paper = load_paper_metadata(args.paper_id)
     paper_script = SCRIPTS_DIR / "papers" / args.paper_id / "make_figures.py"
@@ -593,6 +611,7 @@ def main() -> None:
     print(f"Built PDF: {pdf_path}", flush=True)
     print("Writing provenance and citation metadata...", flush=True)
     prov_path = write_provenance(
+        platfrm=platfrm,
         paper=paper,
         code_tag=code_tag,
         paper_tag=paper_tag,
