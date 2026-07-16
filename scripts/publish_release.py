@@ -398,8 +398,11 @@ def build_paper_pdf(paper: PaperMetadata) -> Path:
     pdf_path = paper_dir / f"{tex_stem}.pdf"
     if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
         raise ReleaseAbort(f"Expected PDF was not generated: {pdf_path}")
-    pdf_out_path = paper_dir / f"{tex_stem}.pdf"
-    return pdf_path
+    last_name = paper.author.split()[-1].capitalize()
+    title = "".join(t.capitalize() for t in paper.title.split())
+    pdf_out_path = paper_dir /f"{last_name}_{title}v{paper.version}.pdf"
+    pdf_path.copy(pdf_out_path)
+    return pdf_out_path
 
 
 def write_citation_cff(code: CodeMetadata, released_at: datetime) -> Path:
