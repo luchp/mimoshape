@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 dist/
+.idea/
 .pytest_cache/
 uv.lock
 # secrets
