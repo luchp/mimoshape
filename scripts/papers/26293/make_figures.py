@@ -1242,11 +1242,12 @@ def main():
 
     if len(sys.argv) > 1:  # optionally run a subset: make_figures.py fig_crest ...
         jobs = [job for job in jobs if job.__name__ in sys.argv[1:]]
-    for job in jobs:
+    print(f"Starting make_figures, this can take a while, be patient...")
+    for k, job in enumerate(jobs):
         t0 = time.time()
         job()
-        print(f"{job.__name__}: {time.time() - t0:.1f}s")
-    print(f"assets written to {FIGURES_DIR} and {TABLES_DIR}")
+        print(f"Job {k} of {len(jobs)}: {job.__name__}: {time.time() - t0:.1f}s", flush=True)
+    print(f"assets written to {FIGURES_DIR} and {TABLES_DIR}", flush=True)
 
 
 if __name__ == "__main__":
