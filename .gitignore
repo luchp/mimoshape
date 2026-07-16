@@ -7,10 +7,10 @@ uv.lock
 # secrets
 scripts/secrets.json
 # LaTeX build artefacts
-paper/*.aux
-paper/*.bbl
-paper/*.blg
-paper/*.log
-paper/*.out
-paper/*.synctex.gz
-paper/*.pdf
+papers/**/*.aux
+papers/**/*.bbl
+papers/**/*.blg
+papers/**/*.log
+papers/**/*.out
+papers/**/*.synctex.gz
+papers/**/*.pdf
