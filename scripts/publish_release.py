@@ -33,28 +33,34 @@ class PlatformMetadata:
     os_version: str
 
 @dataclass(frozen=True)
-class CodeMetadata:
-    title: str
-    summary: str
-    repository: str
-    author_given_names: str
-    author_family_names: str
+class CodeMetadata: 
     affiliation: str
+    author_family_names: str
+    author_given_names: str
+    copyright: str
+    email: str
     keywords: list[str]
     license_name: str
     message: str
+    repository: str
+    summary: str
+    title: str
     version: str
+    website: str
 
 
 @dataclass(frozen=True)
 class PaperMetadata:
+    author: str
+    keywords: str
+    license_name: str
     paper_id: str
+    repository: str
+    summary: str
+    texmain: str
     title: str
     version: str
-    author: str
-    summary: str
-    repository: str
-    texmain: str
+    year: str
 
 
 @dataclass(frozen=True)
@@ -155,16 +161,19 @@ def load_code_metadata(path: Path, code_version_override: str | None) -> CodeMet
     data = load_json(path)
     version = code_version_override or required_str(data, "version", path)
     return CodeMetadata(
-        title=required_str(data, "title", path),
-        summary=required_str(data, "summary", path),
-        repository=required_str(data, "repository", path),
-        author_given_names=required_str(data, "author_given_names", path),
-        author_family_names=required_str(data, "author_family_names", path),
         affiliation=required_str(data, "affiliation", path),
+        author_family_names=required_str(data, "author_family_names", path),
+        author_given_names=required_str(data, "author_given_names", path),
+        copyright=required_str(data, "copyright", path),
+        email=required_str(data, "email", path),
         keywords=normalize_keywords(data.get("keywords"), path),
         license_name=required_str(data, "license", path),
         message=required_str(data, "message", path),
+        repository=required_str(data, "repository", path),
+        summary=required_str(data, "summary", path),
+        title=required_str(data, "title", path),
         version=version,
+        title=required_str(data, "website", path),
     )
 
 
@@ -174,13 +183,16 @@ def load_paper_metadata(paper_id: str) -> PaperMetadata:
     texmain_raw = required_str(data, "texmain", path)
     texmain = texmain_raw if texmain_raw.endswith(".tex") else f"{texmain_raw}.tex"
     return PaperMetadata(
+        author=required_str(data, "author", path),
+        keywords=required_str(data, "keywords", path),
+        license_name=required_str(data, "license_name", path),
         paper_id=paper_id,
+        repository=required_str(data, "repository", path),
+        summary=required_str(data, "summary", path),
+        texmain=texmain,
         title=required_str(data, "title", path),
         version=required_str(data, "version", path),
-        author=required_str(data, "author", path),
-        summary=required_str(data, "summary", path),
-        repository=required_str(data, "repository", path),
-        texmain=texmain,
+        year=required_str(data, "year", path),
     )
 
 
