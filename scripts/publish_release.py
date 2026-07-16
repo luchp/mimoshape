@@ -375,6 +375,13 @@ def run_figures(paper_id: str) -> None:
     )
 
 
+def run_paper_figures(paper_script: Path) -> None:
+    run_checked(
+        ["uv", "run", "--extra", "examples", "python", str(paper_script)],
+        cwd=REPO_ROOT,
+    )
+
+
 def build_paper_pdf(paper: PaperMetadata) -> Path:
     paper_dir = REPO_ROOT / "papers" / paper.paper_id
     tex_path = paper_dir / paper.texmain
@@ -563,7 +570,7 @@ def main() -> None:
             print(f" - {action}")
 
     run_tests()
-    run_figures(args.paper_id)
+    run_paper_figures(paper_script)
     pdf_path = build_paper_pdf(paper)
     prov_path = write_provenance(
         paper=paper,
