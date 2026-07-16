@@ -52,7 +52,7 @@ class CodeMetadata:
 @dataclass(frozen=True)
 class PaperMetadata:
     author: str
-    keywords: str
+    keywords: list[str]
     license_name: str
     paper_id: str
     repository: str
@@ -186,7 +186,7 @@ def load_paper_metadata(code_metadata: CodeMetadata, paper_id: str) -> PaperMeta
                        code_metadata.author_family_names])
     return PaperMetadata(
         author=author,
-        keywords=required_str(data, "keywords", path),
+        keywords=normalize_keywords(data.get("keywords"), path),
         license_name=required_str(data, "license_name", path),
         paper_id=paper_id,
         repository=required_str(data, "repository", path),
