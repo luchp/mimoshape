@@ -177,13 +177,15 @@ def load_code_metadata(path: Path, code_version_override: str | None) -> CodeMet
     )
 
 
-def load_paper_metadata(paper_id: str) -> PaperMetadata:
+def load_paper_metadata(code_metadata: CodeMetadata, paper_id: str) -> PaperMetadata:
     path = SCRIPTS_DIR / "papers" / paper_id / "metadata.json"
     data = load_json(path)
     texmain_raw = required_str(data, "texmain", path)
     texmain = texmain_raw if texmain_raw.endswith(".tex") else f"{texmain_raw}.tex"
+    author = " ".join([code_metadata["author_given_names"],
+                       code_metadata["author_family_names"]])
     return PaperMetadata(
-        author=required_str(data, "author", path),
+        author=author,
         keywords=required_str(data, "keywords", path),
         license_name=required_str(data, "license_name", path),
         paper_id=paper_id,
