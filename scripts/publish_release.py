@@ -187,7 +187,7 @@ def load_paper_metadata(code_metadata: CodeMetadata, paper_id: str) -> PaperMeta
     return PaperMetadata(
         author=author,
         keywords=normalize_keywords(data.get("keywords"), path),
-        license_name=required_str(data, "license_name", path),
+        license_name=required_str(data, "license", path),
         paper_id=paper_id,
         repository=required_str(data, "repository", path),
         summary=required_str(data, "summary", path),
