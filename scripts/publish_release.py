@@ -394,13 +394,14 @@ def build_paper_pdf(paper: PaperMetadata) -> Path:
     run_checked(["bibtex", tex_stem], cwd=paper_dir)
     run_checked(pdflatex, cwd=paper_dir)
     run_checked(pdflatex, cwd=paper_dir)
-
+    # check that we generated a pdf
     pdf_path = paper_dir / f"{tex_stem}.pdf"
     if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
         raise ReleaseAbort(f"Expected PDF was not generated: {pdf_path}")
+    # build the release path
     last_name = paper.author.split()[-1].capitalize()
     title = "".join(t.capitalize() for t in paper.title.split())
-    pdf_out_path = paper_dir /f"{last_name}_{title}v{paper.version}.pdf"
+    pdf_out_path = paper_dir / f"{last_name}_{title}_v{paper.version}.pdf"
     pdf_path.copy(pdf_out_path)
     return pdf_out_path
 

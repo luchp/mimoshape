@@ -39,6 +39,23 @@ def test_make_figures_rejects_invalid_paper_id():
         make_figures.load_dispatch_target("26293/../oops")
 
 
+def test_make_figures_main_passes_extra_args_to_dispatched_target(monkeypatch):
+    captured = {"argv": None}
+
+    def fake_dispatch():
+        captured["argv"] = sys.argv[:]
+
+    monkeypatch.setattr(
+        make_figures, "parse_args", lambda: (types.SimpleNamespace(paper_id="26293"), ["fig_crest"])
+    )
+    monkeypatch.setattr(make_figures, "load_dispatch_target", lambda _: fake_dispatch)
+    monkeypatch.setattr(make_figures.sys, "argv", ["scripts/make_figures.py", "-p", "26293", "fig_crest"])
+
+    make_figures.main()
+
+    assert captured["argv"] == ["scripts/make_figures.py", "fig_crest"]
+
+
 def test_load_code_metadata_accepts_list_keywords(tmp_path: Path):
     metadata_file = tmp_path / "code.json"
     metadata_file.write_text(

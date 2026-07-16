@@ -1212,8 +1212,8 @@ def fig_title_art():
             MomentTarget((0, 0, 1, 1), 8.0),
         ],
     )
-    palette = ["#1a1a1a", "#8c2d19", "#c8a028", "#3a5a78", "#5c5048"]
-    widths = [1.6, 1.1, 0.9, 0.7, 0.5]
+    palette = ["#ff0000", "#00ff00", "#0000ff"]
+    widths = [1.4, 1.4, 1.4]
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     for seed, (colour, lw) in enumerate(zip(palette, widths)):

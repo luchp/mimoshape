@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(
         description="Dispatch figure generation to scripts/papers/<paper_id>/make_figures.py"
     )
@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Paper identifier, for example: 26293",
     )
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 
 def load_dispatch_target(paper_id: str):
@@ -43,9 +43,14 @@ def load_dispatch_target(paper_id: str):
 
 
 def main() -> None:
-    args = parse_args()
+    args, passthrough_args = parse_args()
     dispatch_main = load_dispatch_target(args.paper_id)
-    dispatch_main()
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = [original_argv[0], *passthrough_args]
+        dispatch_main()
+    finally:
+        sys.argv = original_argv
 
 
 if __name__ == "__main__":
