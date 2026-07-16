@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "mimoshape: Synthetic Signal Shaping"
-version: "v1.2"
-date-released: "2026-07-15"
+version: "1.2"
+date-released: "2026-07-16"
 authors:
   - family-names: "Holtkamp"
     given-names: "Luc"

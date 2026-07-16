@@ -15,3 +15,4 @@ papers/**/*.log
 papers/**/*.out
 papers/**/*.synctex.gz
 papers/**/*.pdf
+PROVENANCE.txt

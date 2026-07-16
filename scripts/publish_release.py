@@ -398,6 +398,7 @@ def build_paper_pdf(paper: PaperMetadata) -> Path:
     pdf_path = paper_dir / f"{tex_stem}.pdf"
     if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
         raise ReleaseAbort(f"Expected PDF was not generated: {pdf_path}")
+    pdf_out_path = paper_dir / f"{tex_stem}.pdf"
     return pdf_path
 
 
@@ -505,7 +506,9 @@ def upload_release_asset(upload_url_template: str, asset_path: Path, token: str)
 
 
 def ensure_required_tools() -> None:
+    print("Checking required tools...", flush=True)
     for tool in ("git", "uv", "pdflatex", "bibtex"):
+        print(f" - {tool}", flush=True)
         result = subprocess.run(
             [tool, "--version"],
             cwd=REPO_ROOT,
@@ -515,6 +518,7 @@ def ensure_required_tools() -> None:
         )
         if result.returncode != 0:
             raise ReleaseAbort(f"Required tool is not available: {tool}")
+    print("Required tools available.", flush=True)
 
 def load_secrets():
     with open(SCRIPTS_DIR / "secrets.json") as f:
@@ -530,10 +534,16 @@ def main() -> None:
     if args.execute_publish:
         command.append("--execute-publish")
 
+    print("Starting release workflow...", flush=True)
     ensure_required_tools()
+    print("Checking repository state...", flush=True)
     ensure_repo_clean()
+    print("Repository is clean.", flush=True)
+    print("Reading commit hash...", flush=True)
     commit = head_sha()
+    print(f"Current commit: {commit}", flush=True)
 
+    print("Loading metadata...", flush=True)
     code = load_code_metadata(CODE_METADATA_FILE, args.code_version)
     paper = load_paper_metadata(args.paper_id)
     paper_script = SCRIPTS_DIR / "papers" / args.paper_id / "make_figures.py"
@@ -545,6 +555,7 @@ def main() -> None:
     if not token:
         raise ReleaseAbort("GITHUB_TOKEN must be set to check release existence safely.")
 
+    print("Determining release tags and state...", flush=True)
     code_tag, paper_tag = build_tags(code.version, args.paper_id, paper.version)
     state = collect_release_state(
         repository=paper.repository,
@@ -569,9 +580,14 @@ def main() -> None:
         ):
             print(f" - {action}")
 
+    print("Running tests...", flush=True)
     run_tests()
+    print("Tests complete.", flush=True)
+    print("Building paper PDF...", flush=True)
     #run_paper_figures(paper_script)
     pdf_path = build_paper_pdf(paper)
+    print(f"Built PDF: {pdf_path}", flush=True)
+    print("Writing provenance and citation metadata...", flush=True)
     prov_path = write_provenance(
         paper=paper,
         code_tag=code_tag,
@@ -582,17 +598,23 @@ def main() -> None:
         command=command,
     )
     write_citation_cff(code, released_at)
+    print("Metadata written.", flush=True)
 
     if actions.create_code_tag_local:
+        print(f"Creating local code tag {code_tag}...", flush=True)
         create_annotated_tag(code_tag, f"Code release {code_tag} ({commit})")
     if actions.push_code_tag:
+        print(f"Pushing code tag {code_tag}...", flush=True)
         push_tag(code_tag)
     if actions.create_paper_tag_local:
+        print(f"Creating local paper tag {paper_tag}...", flush=True)
         create_annotated_tag(paper_tag, f"Paper release {paper_tag} ({commit})")
     if actions.push_paper_tag:
+        print(f"Pushing paper tag {paper_tag}...", flush=True)
         push_tag(paper_tag)
 
     if actions.create_paper_release:
+        print(f"Creating GitHub release {paper_tag}...", flush=True)
         release_data = create_github_release(
             repository=paper.repository,
             tag=paper_tag,
@@ -600,8 +622,12 @@ def main() -> None:
             token=token,
         )
         if actions.upload_assets:
+            print("Uploading release assets...", flush=True)
             upload_release_asset(release_data["upload_url"], pdf_path, token)
             upload_release_asset(release_data["upload_url"], prov_path, token)
+            print("Release assets uploaded.", flush=True)
+
+    print("Release workflow complete.", flush=True)
 
 
 if __name__ == "__main__":
