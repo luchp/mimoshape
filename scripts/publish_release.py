@@ -582,7 +582,7 @@ def main() -> None:
     print("Loading metadata...", flush=True)
     platfrm = load_platform_metadata()
     code = load_code_metadata(CODE_METADATA_FILE, args.code_version)
-    paper = load_paper_metadata(args.paper_id)
+    paper = load_paper_metadata(code, args.paper_id)
     paper_script = SCRIPTS_DIR / "papers" / args.paper_id / "make_figures.py"
     if not paper_script.is_file():
         raise ReleaseAbort(f"Missing paper figure script: {paper_script}")
