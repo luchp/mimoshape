@@ -1,14 +1,19 @@
 import filecmp
+import os
+import tempfile
 from pathlib import Path
 
 class OpenWriteChecked:
     def __init__(self, fn: Path, mode: str = "w", chmod: int = None):
         self.fn = fn
-        suffix = fn.suffix or "."
-        self.fn_tmp = self.fn.with_suffix(f"{suffix}_")
         self.mode = mode
         self.chmod = chmod
         self.equal = False
+        # Create temp file in same directory with same suffix so tools (e.g.
+        # matplotlib) can infer the format from the extension.
+        fd, tmp = tempfile.mkstemp(suffix=fn.suffix, dir=fn.parent)
+        self.fn_tmp = Path(tmp)
+        os.close(fd)
 
     def __enter__(self):
         self.open_file = self.fn_tmp.open(self.mode)
