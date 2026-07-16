@@ -189,7 +189,7 @@ def load_paper_metadata(code_metadata: CodeMetadata, paper_id: str) -> PaperMeta
         keywords=normalize_keywords(data.get("keywords"), path),
         license_name=required_str(data, "license", path),
         paper_id=paper_id,
-        repository=required_str(data, "repository", path),
+        repository=code_metadata.repository,
         summary=required_str(data, "summary", path),
         texmain=texmain,
         title=required_str(data, "title", path),
