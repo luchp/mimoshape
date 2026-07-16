@@ -570,7 +570,7 @@ def main() -> None:
             print(f" - {action}")
 
     run_tests()
-    run_paper_figures(paper_script)
+    #run_paper_figures(paper_script)
     pdf_path = build_paper_pdf(paper)
     prov_path = write_provenance(
         paper=paper,

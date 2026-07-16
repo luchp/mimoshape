@@ -26,12 +26,12 @@ class OpenWriteChecked:
         except FileNotFoundError:
             equal = False
         if equal:
-            print(f"File {self.fn} untouched")
+            print(f"File {self.fn} untouched", flush=True)
             self.fn_tmp.unlink()
         else:
             self.fn.unlink(missing_ok=True)
             self.fn_tmp.rename(self.fn)
-            print(f"File {self.fn} changed!")
+            print(f"File {self.fn} changed!", flush=True)
             if self.chmod:
                 self.fn.chmod(self.chmod)
         self.equal = equal

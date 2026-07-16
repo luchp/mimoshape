@@ -47,7 +47,14 @@ sys.path.insert(0, str(BASEDIR / "scripts"))
 from file_utils import OpenWriteChecked
 
 def save_figure_checked(fig, path, **kwargs):
-    """Save figure only if content changed."""
+    """Save figure only if content changed.
+    Make sure that this is idempotent by eliminating metadata
+    """
+    kwargs["metadata"] = {
+        'CreationDate': None,
+        'ModDate': None,
+        'ID': None
+    }
     with OpenWriteChecked(path) as f:
         fig.savefig(f.fn_tmp, **kwargs)
     return f.equal
@@ -56,6 +63,7 @@ def write_text_checked(path, content):
     """Write text only if content changed."""
     with OpenWriteChecked(path) as f:
         f.open_file.write(content)
+    return f.equal
 
 MIMO_TUPLES = [(0, 0, 0), (1, 1, 1), (0, 0, 0, 0), (1, 1, 1, 1), (0, 0, 1, 1)]
 TUPLE_LABELS = {
@@ -70,8 +78,8 @@ def write_metadata():
     with open(PAPER_METADATA_FILE) as f:
         meta = json.load(f)
     write_text_checked(
-        PAPER_DIR / "metadata.tex",
-        f"""% Auto-generated — DO NOT EDIT
+        META_DIR / "metadata.tex",
+        f"""% Auto-generated DO NOT EDIT
     \\usepackage[
         pdfauthor={{{meta['author']}}},
         pdftitle={{{meta['title']} v{meta['version']}}},
@@ -1201,7 +1209,7 @@ def fig_title_art():
         targets=[
             MomentTarget((0, 0, 0, 0), 6.0),
             MomentTarget((1, 1, 1, 1), 6.0),
-            MomentTarget((0, 0, 1, 1), 2.5),
+            MomentTarget((0, 0, 1, 1), 8.0),
         ],
     )
     palette = ["#1a1a1a", "#8c2d19", "#c8a028", "#3a5a78", "#5c5048"]
