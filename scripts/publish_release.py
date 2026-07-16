@@ -182,8 +182,8 @@ def load_paper_metadata(code_metadata: CodeMetadata, paper_id: str) -> PaperMeta
     data = load_json(path)
     texmain_raw = required_str(data, "texmain", path)
     texmain = texmain_raw if texmain_raw.endswith(".tex") else f"{texmain_raw}.tex"
-    author = " ".join([code_metadata["author_given_names"],
-                       code_metadata["author_family_names"]])
+    author = " ".join([code_metadata.author_given_names,
+                       code_metadata.author_family_names])
     return PaperMetadata(
         author=author,
         keywords=required_str(data, "keywords", path),
