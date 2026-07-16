@@ -173,7 +173,7 @@ def load_code_metadata(path: Path, code_version_override: str | None) -> CodeMet
         summary=required_str(data, "summary", path),
         title=required_str(data, "title", path),
         version=version,
-        title=required_str(data, "website", path),
+        website=required_str(data, "website", path),
     )
 
 
