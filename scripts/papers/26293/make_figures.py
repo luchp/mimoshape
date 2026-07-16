@@ -36,6 +36,7 @@ BASEDIR = SCRIPT_DIR.parents[2]
 PAPER_DIR = BASEDIR / "papers" / PAPER_ID
 FIGURES_DIR = PAPER_DIR / "figures"
 TABLES_DIR = PAPER_DIR / "tables"
+META_DIR = PAPER_DIR / "meta"
 DATA_DIR = BASEDIR / "data"
 ROAD_NPZ = DATA_DIR/ "roadsection_220s_300hz.npz"
 PAPER_METADATA_FILE = SCRIPT_DIR / "metadata.json"
