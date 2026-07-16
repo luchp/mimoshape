@@ -17,7 +17,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
-CODE_METADATA_FILE = SCRIPTS_DIR / "code_metadata.json"
+CODE_METADATA_FILE = SCRIPTS_DIR / "metadata.json"
 
 
 class ReleaseAbort(RuntimeError):
