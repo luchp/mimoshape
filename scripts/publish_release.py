@@ -204,13 +204,14 @@ def build_tags(code_version: str, paper_id: str, paper_version: str) -> tuple[st
     return code_tag, paper_tag
 
 
-def ensure_repo_clean() -> None:
+def ensure_repo_clean(force: bool) -> None:
     status = run_checked(["git", "status", "--porcelain"], cwd=REPO_ROOT)
     if status:
-        raise ReleaseAbort(
-            "Repository has outstanding changes. Commit or stash before running release.\n"
-            f"{status}"
-        )
+        msg = f"Repository has outstanding changes. Commit or stash before running release.\n{status}"
+        if force:
+            raise ReleaseAbort(msg)
+        else:
+            print(msg, flush=True)
 
 
 def head_sha() -> str:
@@ -610,8 +611,7 @@ def main() -> None:
     print("Starting release workflow...", flush=True)
     ensure_required_tools()
     print("Checking repository state...", flush=True)
-    ensure_repo_clean()
-    print("Repository is clean.", flush=True)
+    ensure_repo_clean(args.execute_publish)
     print("Reading commit hash...", flush=True)
     commit = head_sha()
     print(f"Current commit: {commit}", flush=True)

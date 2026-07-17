@@ -1,17 +1,17 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite as in CITATION.cff."
 title: "mimoshape: Synthetic Signal Shaping"
 version: "1.2"
-date-released: "2026-07-16"
+date-released: "2026-07-17"
 authors:
   - family-names: "Holtkamp"
     given-names: "Luc"
-    affiliation: "SenseMagic"
+    affiliation: "SenseMagic, Netherlands"
 identifiers:
   - type: url
     value: "https://github.com/luchp/mimoshape"
 license: "MIT"
-abstract: "Reference implementation for analytic-gradient phase optimization with matching CSD and higher-order moments."
+abstract: "Analytic-gradient Phase Optimization over Cross-Spectral Density Constraints and Arbitrary Memoryless Functionals"
 keywords:
   - "signal processing"
   - "cross-spectral density"

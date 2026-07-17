@@ -1,1 +1,1 @@
-uv run --with examples scripts/make_figures.py %*
+uv run --extra examples scripts/make_figures.py %*

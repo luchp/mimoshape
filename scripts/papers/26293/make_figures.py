@@ -81,11 +81,11 @@ def write_metadata():
     \\newcommand{{\\PaperVersion}}{{v{ameta['version']}}}
     \\newcommand{{\\PaperAuthor}}{{{author}}}
     \\newcommand{{\\PaperSummary}}{{{ameta['summary']}}}
-    \\newcommand{{\PaperCopyright}}{{{smeta['copyright']}}}
-    \\newcommand{{\PaperLicense}}{{{ameta['license'] }}}
-    \\newcommand{{\PaperEmail}}{{{smeta['email']}}}
-    \\newcommand{{\PaperWebsite}}{{{smeta['website']}}}
-    \\newcommand{{\PaperAfiliation}}{{{smeta['affiliation']}}}
+    \\newcommand{{\\PaperCopyright}}{{{smeta['copyright']}}}
+    \\newcommand{{\\PaperLicense}}{{{ameta['license'] }}}
+    \\newcommand{{\\PaperEmail}}{{{smeta['email']}}}
+    \\newcommand{{\\PaperWebsite}}{{{smeta['website']}}}
+    \\newcommand{{\\PaperAfiliation}}{{{smeta['affiliation']}}}
     """
     )
 
@@ -1189,26 +1189,32 @@ def fig_title_art():
     x-y trajectories of kurtosis-shaped, partially coherent two-channel
     low-pass blocks: the heavy tails cluster the strokes into drip-like
     excursions.  Replaces the copyrighted Pollock reproduction.
+    To make the curve self similar, the diagonal needs to be 1/f**b
     """
     nt = 2**13
     nf = nt // 2 + 1
     ff = np.fft.rfftfreq(nt)
-    lowpass = 1.0 / (1.0 + (ff / 0.008) ** 4)
+    sw = 2j*np.pi*(ff/0.04)
+    oneoverfb = (ff[1]/ff)**3.8
+    oneoverfb[0] = oneoverfb[-1] = 0
+    lowpass = 1.0 / (1.0 + sw ** 4)
     lowpass[0] = lowpass[-1] = 0.0
     H = np.zeros((2, 2, nf), dtype=complex)
-    H[0, 0] = lowpass
-    H[1, 0] = 0.6 * lowpass
-    H[1, 1] = 0.8 * lowpass
+    H[0, 0] = H[1, 1] = oneoverfb
+    H[0, 1] = lowpass
+    H[1, 0] = lowpass
+    # G[1, 0] = 0.5 - lowpass
+    # H = estimate.csd_to_frf(G)
     problem = SynthesisProblem(
         H,
         targets=[
-            MomentTarget((0, 0, 0, 0), 6.0),
-            MomentTarget((1, 1, 1, 1), 6.0),
-            MomentTarget((0, 0, 1, 1), 8.0),
+            MomentTarget((0, 0, 0, 0), 2),
+            MomentTarget((1, 1, 1, 1), 2),
+            MomentTarget((0, 0, 1, 1), 1.6),
         ],
     )
-    palette = ["#ff0000", "#00ff00", "#0000ff"]
-    widths = [1.4, 1.4, 1.4]
+    palette = ["#3030ff", "#30ff30", "#ff3030"]
+    widths = [2, 2, 2]
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     for seed, (colour, lw) in enumerate(zip(palette, widths)):
