@@ -22,9 +22,9 @@ There are two live web applications where you try it yourself: [Crest minimizer]
 - `src/mimoshape/multimodel.py` — piecewise synthesis for non-stationary records: per-section models, block merging (crossfade / C1 / zero)
 - `tests/` — analytic-vs-numerical gradient checks
 - `examples/` — runnable demos
-- `scripts/make_figures.py` — regenerates every figure and table in the paper
+- `scripts/make_figures` — regenerates every figure and table in the papers, pass in -p paperid, where paperid is the directory in papers/
   (fixed seeds): `uv run --extra examples python scripts/make_figures.py`
-- `paper/` — LaTeX source of the paper
+- `papers/` — LaTeX source of the papers
 
 ## Quick start
 
@@ -64,10 +64,10 @@ for beta in (5, 10, 20, 40, 80, 160):
 uv sync --group dev
 uv run pytest
 ```
-## Generate figures and tables from paper
+## Generate figures and tables from paper with id 26293
 
 ```
-uv run --extra examples scripts\make_figures.py 
+scripts\make_figures -p 26293
 ```
 
 ## License
