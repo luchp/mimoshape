@@ -673,7 +673,6 @@ def main() -> None:
         command=command,
     )
     write_citation_cff(code, released_at)
-    print("Metadata written.", flush=True)
 
     if actions.create_code_tag_local:
         print(f"Creating local code tag {code_tag}...", flush=True)
