@@ -541,7 +541,7 @@ def create_github_release(repository: str, tag: str, body: str, token: str) -> d
         "tag_name": tag,
         "name": tag,
         "body": body,
-        "draft": False,
+        "draft": True,
         "prerelease": False,
     }
     status, data = github_request("POST", url, token=token, payload=payload)
