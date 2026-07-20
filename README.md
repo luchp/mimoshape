@@ -67,7 +67,7 @@ uv run pytest
 ## Generate figures and tables from paper with id 26293
 
 ```
-scripts\make_figures -p 26293
+scripts\figures -p 26293
 ```
 
 ## License
