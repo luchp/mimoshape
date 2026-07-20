@@ -819,7 +819,7 @@ def table_crest_benchmark():
     write_text_checked(TABLES_DIR / "crest_benchmark.tex", "\n".join(lines) + "\n")
     write_text_checked(TABLES_DIR / "crest_bench_stats.tex", 
         f"\\newcommand{{\\crestbenchseeds}}{{{num_seeds}}}\n"
-        f"\\newcommand{{\\crestbenchtimes}}{{{min(times):.1f}--{max(times):.0f}}}\n"
+        f"\\newcommand{{\\crestbenchtimes}}{{{min(times):.1f} to {max(times):.0f}}}\n"
     )
 
 

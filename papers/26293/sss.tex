@@ -198,7 +198,7 @@ Assume further that $\mathbf{x}$ has $N_t$ samples. We can then expand $x_t$ as:
 	&=&  \frac{1}{N_t} \sum_{f=0}^{N_t-1}
 \sum_{j=0}^{N_j-1} h_{k j f} \; \m{e}^{\m{i}\mat{\frac{2 \pi t f}{N_t} + \theta_{k j f} + \psi_{j f}}} 
 \end{eqnarray}
-We will require that $\mathbf{x}$ is real and has zero mean and zero energy at the Nyquist frequency (the latter is both a mathematical convenience and a physical necessity, discussed in Appendix~A). Realness means that for $1 \leq f < N_t/2$
+We will require that $\mathbf{x}$ is real and has zero mean, and zero energy at the Nyquist frequency (the latter is both a mathematical convenience and a physical necessity, discussed in Appendix~A). Realness means that for $1 \leq f < N_t/2$
 \begin{eqnarray}
 	\theta_{k j f} &=& - \theta_{k j \mat{N_t  - f}} \\
 	h_{k j f} &=& h_{k j \mat{N_t  - f}} \\
@@ -222,28 +222,34 @@ The zero-mean and zero-Nyquist conditions are imposed through the magnitudes, $h
 \end{eqnarray}
 Now define, for any ordered tuple of channel indices $\mathbf{i} = \mat{i_1,\ldots,i_m}$ with entries in $\block{0,\ldots,N_j-1}$ and length $|\mathbf{i}|=m\geq 1$, the raw joint moment
 \begin{eqnarray}
-P_\mathbf{i} &=& \frac{1}{N_t}\sum_{t=0}^{N_t-1} \prod_{a=1}^{m} x_{i_a, t}.
+P_\mathbf{i} &=& \frac{1}{N_t}\sum_{t=0}^{N_t-1} \prod_{a=1}^{m} x_{i_a, t}
 \end{eqnarray}
-The tuple $\mathbf{i} = k^{(m)} \equiv \mat{\underbrace{k,\ldots,k}_{m}}$ recovers the channelwise diagonal moment $P_{k^{(m)}} = \frac{1}{N_t}\sum_t x_{k,t}^m$; the tuple $(k,k)$ gives the channel variance $P_{(k,k)}$; and $(i,j)$ with $i\neq j$ gives the time-averaged cross-covariance. The second-order tuples are fixed structurally by the CSD constraint through $\mathbf{H}$ and are therefore excluded from the target set below.
+The tuple $\mathbf{i} = k^{(m)} \equiv \mat{\underbrace{k,\ldots,k}_{m}}$ recovers the channelwise diagonal moment $P_{k^{(m)}} = \frac{1}{N_t}\sum_t x_{k,t}^m\,$; the tuple $(k,k)$ gives the channel variance $P_{(k,k)}\,$; and $(i,j)$ with $i\neq j$ gives the time-averaged cross-covariance. The second-order tuples are fixed structurally by the CSD constraint through $\mathbf{H}$ and are therefore excluded from the target set below.
 
 The normalized joint moment is
 \begin{eqnarray}
-M_\mathbf{i} &=& \frac{P_\mathbf{i}}{\prod_{a=1}^{m} \sqrt{P_{\mat{i_a,i_a}}}} \qquad \mat{m \geq 3},
+M_\mathbf{i} &=& \frac{P_\mathbf{i}}{\prod_{a=1}^{m} \sqrt{P_{\mat{i_a,i_a}}}} \qquad \mat{m \geq 3}
 \end{eqnarray}
-with the convention $M_{(k)} = 0$ (zero-mean constraint). Special cases: $M_{k^{(3)}}$ is the channelwise skewness, $M_{k^{(4)}}$ the channelwise kurtosis, $M_{(i,j,k)}$ with distinct indices a \emph{co-skewness}, and $M_{(i,i,j,j)}$ a \emph{co-kurtosis} -- the latter governing coincident-peak behavior and hence multi-axial fatigue damage~\cite{saathoff2006synthetic}. Steinwolf's original construction~\cite{steinwolf2011ifft} shapes $M_{k^{(3)}}$ and $M_{k^{(4)}}$ only; the added value of the present formulation is the joint-index case.
+with the convention $M_{(k)} = 0$ (zero-mean constraint). 
+
+Special cases: $M_{k^{(3)}}$ is the channelwise skewness, $M_{k^{(4)}}$ the channelwise kurtosis, $M_{(i,j,k)}$ with distinct indices a \emph{co-skewness}, and $M_{(i,i,j,j)}$ a \emph{co-kurtosis} -- the latter governing coincident-peak behavior and hence multi-axial fatigue damage~\cite{saathoff2006synthetic}. Steinwolf's original construction~\cite{steinwolf2011ifft} shapes $M_{k^{(3)}}$ and $M_{k^{(4)}}$ only; the added value of the present formulation is the joint-index case.
 
 %=============================================================================================================================
 \subsection*{Logical vs physical moments: a Nyquist-tail caveat}
 %=============================================================================================================================
 
-The moments $P_\mathbf{i}$ and $M_\mathbf{i}$ above are moments of the discrete signal $x_{k,t}$ on the sample grid $t=0,\ldots,N_t-1$ -- a deliberate departure from Steinwolf's formulation~\cite{steinwolf2011ifft,steinwolf_book_ngaussian}, which evaluates the kurtosis on the continuous periodic inverse-Fourier reconstruction. The two can diverge substantially near Nyquist: a single flat-spectrum tone shows a worst-case kurtosis mismatch of ${\approx}33\%$ at the Nyquist bin itself. This is why we require $h_{k j,\, N_t/2}=0$ below -- no realizable reconstruction filter passes the Nyquist bin cleanly, so energy placed there is physically distorted before it reaches the plant. In practice we recommend a guard band above ${\sim}0.4\,f_s$ with zero target CSD, which keeps this mismatch below ${\sim}1\%$ for spectra of practical interest. Appendix~A develops the distinction in full, including the two operating regimes -- measured versus analytically prescribed targets -- in which it matters differently.
+The moments $P_\mathbf{i}$ and $M_\mathbf{i}$ above are moments of the discrete signal $x_{k,t}$ on the sample grid $t=0,\ldots,N_t-1$ -- a deliberate departure from Steinwolf's formulation~\cite{steinwolf2011ifft,steinwolf_book_ngaussian}, which evaluates the kurtosis on the continuous periodic inverse-Fourier reconstruction. The two can diverge substantially near Nyquist: a single flat-spectrum tone shows a worst-case kurtosis mismatch of ${\approx}33\%$ at the Nyquist bin itself. 
+
+This is why we require $h_{k j,\, N_t/2}=0\,$; no realizable reconstruction filter passes the Nyquist bin cleanly, so energy placed there is physically distorted before it reaches the plant. 
+
+In practice, we recommend a guard band above $f_s/4$ (half the Nyquist frequency) with a target CSD of zero. This keeps the mismatch below ${\sim}1\,\%$ for spectra of practical interest. Appendix~A develops the distinction in full, including the two operating regimes -- measured versus analytically prescribed targets -- in which it matters differently.
 
 %=============================================================================================================================
 \subsection*{The loss function}
 %=============================================================================================================================
 The target set $\mathcal{S}$ is a user-selected collection of tuples with $|\mathbf{i}|\geq 3$, each carrying a target value $\mu_\mathbf{i}$ and optional weight $w_\mathbf{i}$. Typical choices include the diagonal tuples $\seq{k^{(3)},\,k^{(4)}:\,k=0,\ldots,N_j-1}$ for per-channel skew and kurtosis, and the cross tuples $\seq{(i,i,j,j):\,i<j}$ for pair co-kurtosis. The loss is the weighted sum of squared deviations
 \begin{eqnarray}
-\Xi &=& \frac{1}{2}\sum_{\mathbf{i}\in\mathcal{S}} w_\mathbf{i}\,\mat{M_\mathbf{i} - \mu_\mathbf{i}}^2.
+\Xi &=& \frac{1}{2}\sum_{\mathbf{i}\in\mathcal{S}} w_\mathbf{i}\,\mat{M_\mathbf{i} - \mu_\mathbf{i}}^2
 \end{eqnarray}
 
 %=============================================================================================================================
@@ -251,127 +257,202 @@ The target set $\mathcal{S}$ is a user-selected collection of tuples with $|\mat
 %=============================================================================================================================
 By the chain rule,
 \begin{eqnarray}
-\frac{\partial \Xi}{\partial \psi_{q g}} &=& \sum_{\mathbf{i}\in\mathcal{S}} w_\mathbf{i}\,\mat{M_\mathbf{i} - \mu_\mathbf{i}}\,\frac{\partial M_\mathbf{i}}{\partial \psi_{q g}},
+\frac{\partial \Xi}{\partial \psi_{q g}} &=& \sum_{\mathbf{i}\in\mathcal{S}} w_\mathbf{i}\,\mat{M_\mathbf{i} - \mu_\mathbf{i}}\,\frac{\partial M_\mathbf{i}}{\partial \psi_{q g}}
 \end{eqnarray}
-so we need $\partial M_\mathbf{i}/\partial \psi_{q g}$, which in turn depends on $\partial P_\mathbf{i}/\partial \psi_{q g}$ and $\partial P_{(i_a,i_a)}/\partial \psi_{q g}$. All of these, and every other target gradient used in this paper -- endpoint values, the crest surrogate, the MIMO variance coupling below -- are instances of a single identity. It is the central technical result on which the rest of the paper rests, so we state and prove it once, in full generality, before returning to the moment gradients above.
+So we need $\partial M_\mathbf{i}/\partial \psi_{q g}$, which in turn depends on $\partial P_\mathbf{i}/\partial \psi_{q g}$ and $\partial P_{(i_a,i_a)}/\partial \psi_{q g}$. All of these, and every other target gradient used in this paper -- endpoint values, the crest surrogate, the MIMO variance coupling below -- are instances of a single identity. It is the central technical result on which the rest of the paper rests, so we state and prove it once, in full generality, before returning to the moment gradients above.
 
 \begin{proposition}[FFT form of the phase gradient]\label{prop:fft}
-Let $g:\mathbb{R}^m\to\mathbb{R}$ be a differentiable per-sample (memoryless) functional, let $\mathbf{i} = \mat{i_1,\ldots,i_m}$ be a tuple of channel indices, and consider the time-averaged target
+Let $\ell:\mathbb{R}^m\to\mathbb{R}$ be a differentiable per-sample (memoryless) functional, let $\mathbf{i} = \mat{i_1,\ldots,i_m}$ be a tuple of channel indices, and consider the time-averaged target
 \begin{eqnarray}
-Q\mat{\mathbf{x}} &=& \frac{1}{N_t}\sum_{t=0}^{N_t-1} g\mat{x_{i_1, t},\, x_{i_2, t},\, \ldots,\, x_{i_m, t}}.
+Q\mat{\mathbf{x}} &=& \frac{1}{N_t}\sum_{t=0}^{N_t-1} \ell \mat{x_{i_1, t},\, x_{i_2, t},\, \ldots,\, x_{i_m, t}}
 \end{eqnarray}
 Then, with $\mathcal{F}_g\block{y} = \sum_t y_t\,\m{e}^{-\m{i} 2\pi t g/N_t}$ the forward Fourier transform evaluated at bin $g$,
 \begin{eqnarray}
 \frac{\partial Q}{\partial \psi_{q g}}
-	&=& \frac{2}{N_t^2}\;\im{u_{q g}^* \sum_{a=1}^{m} H_{i_a q g}^*\;\mathcal{F}_g\block{\mat{\partial_a g}\mat{x_{i_1,\cdot},\ldots,x_{i_m,\cdot}}}}.
+	&=&  \frac{2}{N_t^2}\;\im{u_{q g}^* \sum_{a=1}^{m} H_{i_a q g}^*\;
+				 \mathcal{F}_g\block*{\frac{\partial \ell}{\partial x_{i_a,t}}} }	
 \end{eqnarray}
 \end{proposition}
+
+% reduce typing, the partial derivative from \ell to x_{a,t}
+\newcommand{\partialEll}{\frac{\partial \ell}{\partial x_{i_a,t}}}
+% evaluated at \mat{x_{i_1,t},\ldots,x_{i_m,t}}
+\newcommand{\partialEllX}{\partialEll \mat{x_{i_1,t},\ldots,x_{i_m,t}}}
 
 \begin{proof}
 Using $\partial x_{k,t}/\partial \psi_{q g} = -\frac{2}{N_t}\, h_{k q g}\sin\mat{\frac{2 \pi t g}{N_t} + \theta_{k q g} + \psi_{q g}}$ and the chain rule,
 \begin{eqnarray}
 \frac{\partial Q}{\partial \psi_{q g}}
-	&=& \frac{1}{N_t}\sum_{t=0}^{N_t-1}\sum_{a=1}^{m}\mat{\partial_a g}\mat{x_{i_1,t},\ldots,x_{i_m,t}}\,\frac{\partial x_{i_a,t}}{\partial \psi_{q g}} \\
-	&=& -\frac{2}{N_t^2}\sum_{a=1}^{m}\sum_{t=0}^{N_t-1}\mat{\partial_a g}\mat{x_{i_1,t},\ldots,x_{i_m,t}}\; h_{i_a q g}\,\sin\mat{\frac{2 \pi t g}{N_t} + \theta_{i_a q g} + \psi_{q g}}.
+	&=& \frac{1}{N_t}\sum_{t=0}^{N_t-1}\sum_{a=1}^{m}
+			  \partialEllX \;
+			  \frac{\partial x_{i_a,t}}{\partial \psi_{q g}} \\
+	&=& -\frac{2}{N_t^2}\sum_{a=1}^{m}
+			\sum_{t=0}^{N_t-1}
+				\partialEllX \;
+				h_{i_a q g}\,\sin\mat{\frac{2 \pi t g}{N_t} + \theta_{i_a q g} + \psi_{q g}}
 \end{eqnarray}
 Writing $\sin z = \im{\m{e}^{\m{i} z}}$ and collecting the phase factors as $h_{i_a q g}\,\m{e}^{\m{i}\theta_{i_a q g}} = H_{i_a q g}$ and $\m{e}^{\m{i}\psi_{q g}} = u_{q g}$,
 \begin{eqnarray}
 \frac{\partial Q}{\partial \psi_{q g}}
-	&=& -\frac{2}{N_t^2}\;\im{u_{q g} \sum_{a=1}^{m} H_{i_a q g} \sum_{t=0}^{N_t-1}\mat{\partial_a g}\mat{x_{i_1,t},\ldots,x_{i_m,t}}\;\m{e}^{\m{i}\frac{2 \pi t g}{N_t}}}.
+	&=& -\frac{2}{N_t^2}\;\im{u_{q g} \sum_{a=1}^{m} H_{i_a q g} 
+			\sum_{t=0}^{N_t-1}
+				\partialEllX \;
+				\m{e}^{\m{i}\frac{2 \pi t g}{N_t}}}.
 \end{eqnarray}
-The values $\mat{\partial_a g}\mat{x_{i_1,t},\ldots,x_{i_m,t}}$ are real for every $t$, since $g$ is real-valued; conjugating a real sequence leaves it untouched, so conjugating $\mathcal{F}_g$ only flips the sign of its exponent -- exactly the sign difference between the inner sum above and the defining sum of $\mathcal{F}_g$. The inner sum over $t$ is therefore itself the complex conjugate of the forward transform of the pointwise derivative:
+
+The values $\partialEll$ are real for every $t$, since $\ell$ is real-valued; conjugating a real sequence leaves it untouched, so conjugating $\mathcal{F}_g$ only flips the sign of its exponent -- exactly the sign difference between the inner sum above and the defining sum of $\mathcal{F}_g$. The inner sum over $t$ is therefore itself the complex conjugate of the forward transform of the pointwise derivative:
 \begin{eqnarray}
-\sum_{t=0}^{N_t-1}\mat{\partial_a g}\mat{x_{i_1,t},\ldots,x_{i_m,t}}\;\m{e}^{\m{i}\frac{2 \pi t g}{N_t}}
-	&=& \mat{\sum_{t=0}^{N_t-1}\mat{\partial_a g}\mat{x_{i_1,t},\ldots,x_{i_m,t}}\;\m{e}^{-\m{i}\frac{2 \pi t g}{N_t}}}^{*} \\
-	&=& \mathcal{F}_g\block{\mat{\partial_a g}}^{*}.
+	    \sum_{t=0}^{N_t-1}
+			\partialEllX\;
+			\m{e}^{\m{i}\frac{2 \pi t g}{N_t}}
+	&=& \mat{
+		\sum_{t=0}^{N_t-1}
+			\partialEllX \;
+			\m{e}^{-\m{i}\frac{2 \pi t g}{N_t}}}^{*} \\
+	&=& \mathcal{F}_g\block*{\partialEll}^{*}
 \end{eqnarray}
+
 Substituting turns the whole time-domain sum into one already-familiar spectral object, conjugated:
+
 \begin{eqnarray}
 \frac{\partial Q}{\partial \psi_{q g}}
-	&=& -\frac{2}{N_t^2}\;\im{u_{q g} \sum_{a=1}^{m} H_{i_a q g}\;\mathcal{F}_g\block{\mat{\partial_a g}}^{*}}.
+	&=& -\frac{2}{N_t^2}\;
+			\im{u_{q g} 
+		  		\sum_{a=1}^{m} H_{i_a q g}\;
+		  			\mathcal{F}_g\block*{\partialEll}^{*}}
 \end{eqnarray}
-It remains to move that conjugate off the transform and onto the phasors $u_{qg}$, $H_{i_a qg}$, where it belongs physically: the transform is a spectral quantity computed once per bin $g$, while the phasors are the per-phase quantities the optimizer differentiates against. For any $z\in\mathbb{C}$, $\im{z}=-\im{z^*}$; taking $z = u_{q g}\sum_{a=1}^{m} H_{i_a qg}\,\mathcal{F}_g\block{\mat{\partial_a g}}^{*}$, so that $z^{*} = u_{q g}^{*}\sum_{a=1}^{m} H_{i_a qg}^{*}\,\mathcal{F}_g\block{\mat{\partial_a g}}$, gives
+It remains to move that conjugate off the transform and onto the phasors $u_{qg}$, $H_{i_a qg}$, where it belongs physically: the transform is a spectral quantity computed once per bin $g$, while the phasors are the per-phase quantities the optimizer differentiates against. For any $z\in\mathbb{C}$, $\im{z}=-\im{z^*}$; and therefore:
 \begin{eqnarray}
-\im{u_{q g} \sum_{a=1}^{m} H_{i_a q g}\;\mathcal{F}_g\block{\mat{\partial_a g}}^{*}}
-	&=& -\im{u_{q g}^{*} \sum_{a=1}^{m} H_{i_a q g}^{*}\;\mathcal{F}_g\block{\mat{\partial_a g}}}.
+		\im{u_{q g} \sum_{a=1}^{m} H_{i_a q g}\;
+			\mathcal{F}_g\block*{\partialEll}^{*}}
+	&=& -\im{u_{q g}^{*} \sum_{a=1}^{m} H_{i_a q g}^{*}\;
+			\mathcal{F}_g\block*{\partialEll}}
 \end{eqnarray}
 The conjugate has moved from the transform onto $u_{qg}$ and $H_{i_a qg}$, and the extra minus sign this introduces cancels the prefactor's minus sign, turning $-2/N_t^2$ into $+2/N_t^2$ and giving the stated identity.
 \end{proof}
 
-\emph{The phase-gradient of any memoryless functional of the inverse-Fourier signal is itself a Fourier transform} -- specifically, of the pointwise partial derivative $\partial_a g$ with respect to the $a$-th argument, projected through $u_{q g}^*$ and $H_{i_a q g}^*$ and averaged over the arguments $a=1,\ldots,m$. One FFT per distinct argument of $g$ suffices; repeated arguments share their FFT. Every target-gradient in the paper is an instance of this identity, so the optimizer needs only two building blocks: the pointwise derivatives $\partial_a g$, and one length-$N_t$ FFT of each.
+\emph{The phase-gradient of any memoryless functional of the inverse-Fourier signal is itself a Fourier transform} -- specifically, of the pointwise partial derivative $\partialEll$ with respect to the $a$-th argument, projected through $u_{q g}^*$ and $H_{i_a q g}^*$ and averaged over the arguments $a=1,\ldots,m$. One FFT per distinct argument of $\ell$ suffices; repeated arguments share their FFT. 
+Every target-gradient in the paper is an instance of this identity, so the optimizer needs only two building blocks: the pointwise derivatives $\partialEll$, and one length-$N_t$ FFT of each.
 
-\textbf{Instance: joint moments.} With $g\mat{y_1,\ldots,y_m} = \prod_{a=1}^{m} y_a$, so $\partial_a g = \prod_{b\neq a} y_b$, Proposition~\ref{prop:fft} gives
+\textbf{Instance: joint moments.} With $\ell\mat{y_1,\ldots,y_m} = \prod_{a=1}^{m} y_a$, so $\partialEll = \prod_{b\neq a} y_b$, Proposition~\ref{prop:fft} gives
 \begin{eqnarray}
 \frac{\partial P_\mathbf{i}}{\partial \psi_{q g}}
-	&=& \frac{2}{N_t^2}\;\im{u_{q g}^* \sum_{a=1}^{m} H_{i_a q g}^*\;\mathcal{F}_g\block{\prod_{b\neq a} x_{i_b,\cdot}}}.
+	&=& \frac{2}{N_t^2}\;\im{u_{q g}^* 
+			\sum_{a=1}^{m} H_{i_a q g}^*\;\mathcal{F}_g\block*{\prod_{b\neq a} x_{i_b,\cdot}}}
 \end{eqnarray}
 
 \textbf{Instance: diagonal moment.} For $\mathbf{i} = k^{(m)}$ all $m$ partial products equal $x_{k,\cdot}^{m-1}$ and all $m$ frequency factors equal $H_{k q g}^*$, so
 \begin{eqnarray}
-\frac{\partial P_{k^{(m)}}}{\partial \psi_{q g}} &=& \frac{2 m}{N_t^2}\,\im{u_{q g}^*\, H_{k q g}^*\;\mathcal{F}_g\block{x_{k,\cdot}^{m-1}}},
+	\frac{\partial P_{k^{(m)}}}{\partial \psi_{q g}} 
+	&=& \frac{2 m}{N_t^2}\,\im{u_{q g}^*\, 
+		H_{k q g}^*\;\mathcal{F}_g\block*{x_{k}^{m-1}}}
 \end{eqnarray}
 recovering the single-channel Steinwolf-style gradient~\cite{steinwolf2011ifft} as a special case.
 
 \textbf{Instance: co-skewness.} For $\mathbf{i}=(i,j,k)$ with distinct entries,
 \begin{eqnarray}
-\frac{\partial P_{(i,j,k)}}{\partial \psi_{q g}} &=& \frac{2}{N_t^2}\;\im{u_{q g}^*\block{H_{i q g}^*\,\mathcal{F}_g\block{x_j x_k} + H_{j q g}^*\,\mathcal{F}_g\block{x_i x_k} + H_{k q g}^*\,\mathcal{F}_g\block{x_i x_j}}}.
+	\frac{\partial P_{(i,j,k)}}{\partial \psi_{q g}} 
+	&=& \frac{2}{N_t^2}\;\im{u_{q g}^*
+			\mat*{H_{i q g}^*\,\mathcal{F}_g\block*{x_j x_k} + 
+				  H_{j q g}^*\,\mathcal{F}_g\block*{x_i x_k} + 
+				  H_{k q g}^*\,\mathcal{F}_g\block*{x_i x_j} }}
 \end{eqnarray}
 
-\textbf{Instance: co-kurtosis.} For $\mathbf{i}=(i,i,j,j)$ the partial products collapse pairwise so only two FFTs are needed:
+\textbf{Instance: co-kurtosis.} For $\mathbf{i}=(i,i,j,j)$ the partial products collapse pairwise 
+so only two FFTs are needed:
 \begin{eqnarray}
-\frac{\partial P_{(i,i,j,j)}}{\partial \psi_{q g}} &=& \frac{4}{N_t^2}\;\im{u_{q g}^*\block{H_{i q g}^*\,\mathcal{F}_g\block{x_i x_j^2} + H_{j q g}^*\,\mathcal{F}_g\block{x_j x_i^2}}}.
+	\frac{\partial P_{(i,i,j,j)}}{\partial \psi_{q g}} 
+	&=& \frac{4}{N_t^2}\;\im{u_{q g}^*
+		\mat*{H_{i q g}^*\,\mathcal{F}_g\block*{x_i x_j^2} + 
+			 H_{j q g}^*\,\mathcal{F}_g\block*{x_j x_i^2} }}
 \end{eqnarray}
 
-\textbf{Instance: variance.} Taking $g\mat{y} = y^2$ so $\partial_y g = 2 y$, and using $\mathcal{F}_g\block{x_{k,\cdot}} = v_{k g}$,
+\textbf{Instance: variance.} Taking $\ell\mat{y} = y^2$ so $\frac{\partial \ell}{\partial_y} = 2 y$, 
+and using $\mathcal{F}_g\block*{x_{k}} = v_{k g}$,
 \begin{eqnarray}
 \frac{\partial P_{(k,k)}}{\partial \psi_{q g}}
-	&=& \frac{4}{N_t^2}\,\im{u_{q g}^*\, H_{k q g}^*\;\mathcal{F}_g\block{x_{k,\cdot}}}
+	&=& \frac{4}{N_t^2}\,\im{u_{q g}^*\, 
+			H_{k q g}^*\;\mathcal{F}_g\block*{x_{k}}}
 	\;=\; \frac{4}{N_t^2}\,\im{u_{q g}^*\, H_{k q g}^*\, v_{k g}}.
 \end{eqnarray}
 The $v_{k g}$ are computed once at the start of every iteration (they are needed to obtain $x_{k,t}$ in the first place), so the variance gradient is free.
 
 \textbf{Chain rule on the normalization.}
 \begin{eqnarray}
-\frac{\partial M_\mathbf{i}}{\partial \psi_{q g}}
+	\frac{\partial M_\mathbf{i}}{\partial \psi_{q g}}
 	&=& \frac{1}{\prod_{a=1}^{m}\sqrt{P_{(i_a,i_a)}}}
-	\block{\frac{\partial P_\mathbf{i}}{\partial \psi_{q g}}
-	- \frac{P_\mathbf{i}}{2}\sum_{a=1}^{m}\frac{1}{P_{(i_a,i_a)}}\frac{\partial P_{(i_a,i_a)}}{\partial \psi_{q g}}}.
+		\block*{
+			\frac{\partial P_\mathbf{i}}{\partial \psi_{q g}}
+		  - \frac{P_\mathbf{i}}{2}
+		  		\sum_{a=1}^{m} 
+		  			\frac{1}{P_{(i_a,i_a)}}
+		  			\frac{\partial P_{(i_a,i_a)}}{\partial \psi_{q g}}}.
 \end{eqnarray}
 
-\textbf{MIMO variance coupling.} In the single-channel case the per-channel variance $P_{(k,k)}$ is invariant under changes of its own phases (a direct consequence of the FFT identity, or equivalently of $\im{|H_{q q g}u_{q g}|^2}=0$ when $H$ is diagonal), so it factors out of the loss gradient cleanly. In the MIMO case with off-diagonal $H_{p q g}$ the variance of channel $k$ depends on the phases of other channels through the cross-coupling and no longer factors out -- raising the concern that MIMO might require fundamentally new machinery beyond the single-channel case. Proposition~\ref{prop:fft} removes that concern: the variance derivative is itself an instance of the same FFT identity, contributing one already-computed pass ($v_{k g}$) per channel to the total gradient. Every additional target -- diagonal moment, cross-moment, variance, endpoint value, or any user-supplied smooth memoryless functional -- adds at most $|\mathbf{i}|$ FFTs to the iteration and nothing conceptually new.
+\textbf{MIMO variance coupling.} In the single-channel case the per-channel variance $P_{(k,k)}$ is invariant under changes of its own phases (a direct consequence of the FFT identity, or equivalently of $\im{|H_{q q g}u_{q g}|^2}=0$ when $H$ is diagonal), so it factors out of the loss gradient cleanly. 
+In the MIMO case with off-diagonal $H_{p q g}$ the variance of channel $k$ depends on the phases of other channels through the cross-coupling and no longer factors out -- raising the concern that MIMO might require fundamentally new machinery beyond the single-channel case. 
+Proposition~\ref{prop:fft} removes that concern: the variance derivative is itself an instance of the same FFT identity, contributing one already-computed pass ($v_{k g}$) per channel to the total gradient. Every additional target -- diagonal moment, cross-moment, variance, endpoint value, or any user-supplied smooth memoryless functional -- adds at most $|\mathbf{i}|$ FFTs to the iteration and nothing conceptually new.
 
-\textbf{Cost.} Each target tuple contributes at most $|\mathbf{i}|$ length-$N_t$ FFTs to the gradient (fewer when partial products repeat). The variance passes $v_{k g}$ needed for normalization are shared across all targets referencing channel $k$; one pass per channel suffices per iteration. For $N_j$ output channels with all per-channel skew/kurtosis plus all pair co-kurtosis in $\mathcal{S}$, the count is one FFT per diagonal skew and kurtosis target ($2 N_j$) plus two per co-kurtosis pair ($N_j\mat{N_j-1}$): $N_j\mat{N_j+1}$ FFTs per gradient evaluation in total, quadratic in the channel count. The scaling rows of Table~\ref{tab:timing} measure this growth empirically up to $N_j = 32$.
+\textbf{Cost.} Each target tuple contributes at most $|\mathbf{i}|$ length-$N_t$ FFTs to the gradient (fewer when partial products repeat). The variance needed for normalization are shared across all targets referencing channel $k$; one pass per channel suffices per iteration. 
+For $N_j$ output channels with all per-channel skew/kurtosis plus all pair co-kurtosis in $\mathcal{S}$, the count is one FFT per diagonal skew and kurtosis target ($2 N_j$) plus two per co-kurtosis pair ($N_j\mat{N_j-1}$): $N_j\mat{N_j+1}$ FFTs per gradient evaluation in total, quadratic in the channel count. The scaling rows of Table~\ref{tab:timing} measure this growth empirically up to $N_j = 32$.
 
-\textbf{Feasibility.} When the target statistics $\mu_\mathbf{i}$ are estimated from a measured multi-channel record (see the multitaper subsection below), a signal with those statistics exists -- the record itself -- and in our experience the optimizer reaches them within the tolerance set by the finite block length; this is the primary operating regime of the method. For analytically prescribed targets no closed-form realizability bounds are known in the general case, and we rely on two cheap numerical diagnostics. First, a \emph{random-phase ensemble check} (provided by the reference implementation): evaluate every $M_\mathbf{i}$ over an ensemble of random-phase draws ($64$ draws suffice) and compare each target against the ensemble mean and standard deviation. A target within a few ensemble standard deviations of the mean is already close to what unshaped random phases produce, so the optimizer reaches it in few iterations. The converse does not hold -- the ensemble concentrates near the Gaussian point by the central limit theorem, so a strongly non-Gaussian target such as kurtosis $5$ sits tens of ensemble standard deviations out yet is realizable in practice (it is the feasible target used throughout the Examples section, converging in roughly $100$ evaluations) -- so the check locates the easy region, not the feasibility boundary. Second, the \emph{residual loss} of a converged run measures the infeasibility gap directly: as the convergence example below shows, an infeasible target produces no erratic behavior, only a smooth descent onto a plateau whose height quantifies how far the target lies outside the achievable set.
+\textbf{Feasibility.} When the target statistics $\mu_\mathbf{i}$ are estimated from a measured multi-channel record (see the multitaper subsection below), a signal with those statistics exists -- the record itself -- and in our experience the optimizer reaches them within the tolerance set by the finite block length; this is the primary operating regime of the method. 
+For analytically prescribed targets no closed-form realizability bounds are known in the general case, and we rely on two cheap numerical diagnostics. 
 
-\textbf{Beyond polynomial moments.} Proposition~\ref{prop:fft} places no restriction on $g$ beyond differentiability, but it does require $g$ to act on \emph{same-time} samples: any smooth functional of the form $\frac{1}{N_t}\sum_t g\mat{x_{i_1,t},\ldots,x_{i_m,t}}$ is a legitimate target for the same optimizer without new machinery. This covers absolute-value moments $g\mat{y}=\abs{y}^m$ (with $m\abs{y}^{m-1}\operatorname{sgn} y$ as the pointwise derivative) and coincident-excursion probabilities via smoothed indicator products; the user provides $g$ and $\partial_a g$ as pointwise functions and the optimizer handles the rest. The reference implementation exposes single-channel instances as \texttt{FunctionTarget} (on the raw signal) and \texttt{ScaledFunctionTarget} (on the normalized signal $z_k = x_k/s_k$, with the variance chain rule handled analytically); the $\ell_p$ crest objective of Guillaume \emph{et al.}~\cite{guillaume1991crest} is then the one-liner $g\mat{z}=\abs{z}^p$, put to work in the benchmark of Appendix~C. Functionals that couple \emph{different} time indices fall outside the stated form: peak and sign-crossing counts involve neighboring samples $x_{t\pm1}$, and rainflow-type fatigue dosage functionals are history-dependent, not memoryless. The extension to lagged products $g\mat{x_{i_1,t},\,x_{i_2,t+\ell}}$ appears mechanical -- each argument acquires its own frequency-domain shift factor -- but is not derived here.
+First, a \emph{random-phase ensemble check} (provided by the reference implementation):
+evaluate each functional $M_\mathbf{i}$ over an ensemble of random-phase draws ($64$ draws suffice) to estimate its expected value $\mathbb{E}[M_\mathbf{i}]$ and standard deviation $\sigma(M_\mathbf{i})$ under an unshaped, uniform phase distribution. A target within a few ensemble standard deviations of the mean is already close to what unshaped random phases produce, so the optimizer reaches it in few iterations. 
+
+The converse does not hold -- the ensemble concentrates near the Gaussian point by the central limit theorem, so a strongly non-Gaussian target such as kurtosis $5$ sits tens of ensemble standard deviations out, yet is realizable in practice (it is the feasible target used throughout the Examples section, converging in roughly $100$ evaluations) -- so the check locates the easy region, not the feasibility boundary. 
+
+Second, the \emph{residual loss} of a converged run measures the infeasibility gap directly: as the convergence example below shows, an infeasible target produces no erratic behavior, only a smooth descent onto a plateau whose height quantifies how far the target lies outside the achievable set.
+
+\textbf{Beyond polynomial moments.} Proposition~\ref{prop:fft} places no restriction on $\ell$ beyond differentiability, but it does require $\ell$ to act on \emph{same-time} samples: any smooth functional of the form $\frac{1}{N_t}\sum_t \ell \mat{x_{i_1,t},\ldots,x_{i_m,t}}$ is a legitimate target for the same optimizer without new machinery. 
+
+This covers absolute-value moments $\ell\mat{y}=\abs{y}^m$ (with $m\abs{y}^{m-1}\operatorname{sgn} y$ as the pointwise derivative) and coincident-excursion probabilities via smoothed indicator products; the user provides $\ell$ and $\partialEll$ as pointwise functions and the optimizer handles the rest. 
+The reference implementation exposes single-channel instances as \texttt{FunctionTarget} (on the raw signal) and \texttt{ScaledFunctionTarget} (on the normalized signal $z_k = x_k/s_k$, with the variance chain rule handled analytically); the $\ell_p$ crest objective of Guillaume \emph{et al.}~\cite{guillaume1991crest} is then the one-liner $\ell\mat{z}=\abs{z}^p$, put to work in the benchmark of Appendix~C. 
+
+Functionals that couple \emph{different} time indices fall outside the stated form: peak and sign-crossing counts involve neighboring samples $x_{t\pm1}$, and rainflow-type fatigue dosage functionals are history-dependent, not memoryless. The extension to lagged products $g\mat{x_{i_1,t},\,x_{i_2,t+\ell}}$ appears mechanical -- each argument acquires its own frequency-domain shift factor -- but is not derived here.
 
 %=============================================================================================================================
 \subsection*{Endpoint continuity for streamed blocks}
 %=============================================================================================================================
 
-Live streaming concatenates independent blocks -- each with fresh random phases -- on the fly; unless consecutive blocks share their head value and slope, every block boundary produces a jump or slope kink that shows up as broadband spectral leakage. The synthesizer fixes the block's head value and slope to prescribed constants (zero by default) as two extra terms in the loss. Because this is point evaluation at $t=0$ rather than a sample average, it is the degenerate case of Proposition~\ref{prop:fft} in which the ``FFT of the pointwise gradient'' collapses to a Kronecker delta: no additional FFT is needed, only a single complex multiply--add per phase per constrained channel. Appendix~B gives the constraint and its gradient in full, together with the periodic FRF estimation use case, where the same head-value constraint removes the start-up transient without any seam constraint being needed between repetitions.
+Live streaming concatenates independent blocks -- each with fresh random phases -- on the fly; unless consecutive blocks share their head value and slope, every block boundary produces a jump or slope kink that shows up as broadband spectral leakage. 
+
+The synthesizer fixes the block's head value and slope to prescribed constants (zero by default) as two extra terms in the loss. Because this is point evaluation at $t=0$ rather than a sample average, it is the degenerate case of Proposition~\ref{prop:fft} in which the ``FFT of the pointwise gradient'' collapses to a Kronecker delta: no additional FFT is needed, only a single complex multiply--add per phase per constrained channel. 
+
+Appendix~B gives the constraint and its gradient in full, together with the periodic FRF estimation use case, where the same head-value constraint removes the start-up transient without any seam constraint being needed between repetitions.
 
 %=============================================================================================================================
 \subsection*{Direct minimization: a smooth crest-factor surrogate}
 %=============================================================================================================================
 
-For model estimation and endurance testing one often wants the \emph{opposite} of heavy tails: minimum kurtosis and minimum crest factor $\max_t\abs{x_{k t}}/s_k$ (with $s_k = \sqrt{P_{(k,k)}}$), concentrating the signal energy and maximizing the drive level attainable within actuator limits. Crest-factor minimization for single-channel multisines is a classical subject~\cite{schroeder1970lowpeak,vanderouderaa1988peak,guillaume1991crest,retzler2022crest}; the treatment below recovers this special case within the present MIMO framework. The crest factor itself is a poor optimization objective: its gradient is supported only at the extremal sample, so a gradient step relocates the peak elsewhere in the block and the optimizer hops between candidate peaks without converging. Minimizing the kurtosis $M_{k^{(4)}}$ instead is smooth but weights peaks only polynomially and stalls at a crest well above the achievable floor; higher even moments ($M_{k^{(8)}}$, $M_{k^{(16)}}$) push further but exhibit the same plateau behavior.
+For model estimation and endurance testing one often wants the \emph{opposite} of heavy tails: minimum kurtosis and minimum crest factor $\max_t\abs{x_{k t}}/s_k$ (with $s_k = \sqrt{P_{(k,k)}}$), concentrating the signal energy and maximizing the drive level attainable within actuator limits. Crest-factor minimization for single-channel multisines is a classical subject~\cite{schroeder1970lowpeak,vanderouderaa1988peak,guillaume1991crest,retzler2022crest}; the treatment below recovers this special case within the present MIMO framework. 
+
+The crest factor itself is a poor optimization objective: its gradient is supported only at the extremal sample, so a gradient step relocates the peak elsewhere in the block and the optimizer hops between candidate peaks without converging. 
+
+Minimizing the kurtosis $M_{k^{(4)}}$ instead is smooth but weights peaks only polynomially and stalls at a crest well above the achievable floor; higher even moments ($M_{k^{(8)}}$, $M_{k^{(16)}}$) push further but exhibit the same plateau behavior.
 
 A smooth surrogate with \emph{exponential} peak weighting resolves this. For channel $k$ define
 \begin{eqnarray}
-\Xi_{\m{crest}} &=& \frac{w}{\beta}\,\ln\mat{\frac{1}{N_t}\sum_{t=0}^{N_t-1}\cosh z_{k t}},
-\qquad z_{k t} \;=\; \frac{\beta\, x_{k t}}{s_k},
+\Xi_{\m{crest}} &=& \frac{w}{\beta}\,\ln\mat*{\frac{1}{N_t}\sum_{t=0}^{N_t-1}\cosh z_{k t}},
+\qquad z_{k t} \;=\; \frac{\beta\, x_{k t}}{s_k}
 \end{eqnarray}
-which approaches $w \max_t \abs{x_{k t}}/s_k$ from below as $\beta\to\infty$, with bias of order $\ln\mat{2 N_t}/\beta$. This term is added directly to the loss (it has no target value) and its gradient is one more instance of Proposition~\ref{prop:fft}: with $C = \frac{1}{N_t}\sum_t \cosh z_{k t}$,
+which approaches $w \max_t \abs{x_{k t}}/s_k$ from below as $\beta\to\infty$, with bias of order $\ln\mat{2 N_t}/\beta$. This term is added directly to the loss (it has no target value) and its gradient is one more instance of Proposition~\ref{prop:fft} :
 \begin{eqnarray}
-\frac{\partial \Xi_{\m{crest}}}{\partial \psi_{q g}}
-	&=& \frac{w}{C}\block{\frac{1}{s_k}\,\frac{2}{N_t^2}\,\im{u_{q g}^*\, H_{k q g}^*\;\mathcal{F}_g\block{\sinh z_{k,\cdot}}}
-	- \frac{1}{2 s_k^3}\mat{\frac{1}{N_t}\sum_t x_{k t}\sinh z_{k t}}\frac{\partial P_{(k,k)}}{\partial \psi_{q g}}},
+	C &=& \frac{1}{N_t}\sum_{t=0}^{N_t-1} \cosh z_{k t} \\
+	\frac{\partial \Xi_{\m{crest}}}{\partial \psi_{q g}}
+	  &=& \frac{w}{C}\block*{
+	  	  \frac{1}{s_k}\,\frac{2}{N_t^2}\,
+		  	  \im{u_{q g}^*\, H_{k q g}^*\;\mathcal{F}_g\block*{\sinh z_{k}}}
+		- \frac{1}{2 s_k^3} \, \frac{\partial P_{(k,k)}} {\partial \psi_{q g}} \,
+		  	  \frac{1}{N_t} \sum_{t=0}^{N_t-1} x_{k t}\sinh z_{k t} }
 \end{eqnarray}
-one FFT for the memoryless factor $\sinh z$ plus the already-computed variance gradient; the second term is required because in the MIMO case the normalization $s_k$ depends on the phases of all channels through the off-diagonal $H$. Numerically the surrogate is evaluated in shifted-exponential form ($\cosh$ and $\sinh$ scaled by $\m{e}^{-\max_t\abs{z_{k t}}}$) so that large $\beta$ does not overflow.
+The cost is one FFT for the memoryless factor $\sinh z$ plus the already-computed variance gradient; the second term is required because in the MIMO case the normalization $s_k$ depends on the phases of all channels through the off-diagonal $H$. Numerically the surrogate is evaluated in shifted-exponential form ($\cosh$ and $\sinh$ scaled by $\m{e}^{-\max_t\abs{z_{k t}}}$) so that large $\beta$ does not overflow.
 
-Large $\beta$ makes the landscape stiff, and starting a high-$\beta$ optimization from random phases stalls at a mediocre crest. A \emph{$\beta$-continuation} resolves this: optimize at a small $\beta$, then double $\beta$ and warm-start from the previous optimum. Each stage after the first converges in a small fraction of the initial stage's iterations, and the continuation reached lower crest factors than single-stage runs at every budget we tested (see the example below). The staging mirrors the classical $\ell_p$-norm (Polya) continuation of Guillaume \emph{et al.}~\cite{guillaume1991crest}, with two differences: the logcosh gradient factor $\tanh z$ is bounded, so no numerical care is needed at high stiffness where the $\ell_p$ factor $p\,\abs{x}^{p-1}$ overflows, and the surrogate slots unchanged into the MIMO framework alongside CSD structure, cross-moment and endpoint targets.
+Large $\beta$ makes the landscape stiff, and starting a high-$\beta$ optimization from random phases stalls at a mediocre crest. A \emph{$\beta$-continuation} resolves this: optimize at a small $\beta$, then double $\beta$ and warm-start from the previous optimum. Each stage after the first converges in a small fraction of the initial stage's iterations, and the continuation reached lower crest factors than single-stage runs at every budget we tested (see the example below). 
+
+The staging mirrors the classical $\ell_p$-norm (Polya) continuation of Guillaume \emph{et al.}~\cite{guillaume1991crest}, with two differences: the logcosh gradient factor $\tanh z$ is bounded, so no numerical care is needed at high stiffness where the $\ell_p$ factor $p\,\abs{x}^{p-1}$ overflows, and the surrogate slots unchanged into the MIMO framework alongside CSD structure, cross-moment and endpoint targets.
 
 %=============================================================================================================================
 \subsection*{Estimating targets from measured data}
@@ -383,7 +464,7 @@ The synthesizer requires a target CSD $\mathbf{G}\mat{f}$ (which determines $\ma
 
 \textbf{Multitaper with Slepian sequences.} The Thomson multitaper estimator~\cite{thomson1982multitaper} replaces the single window with a family of $K$ orthonormal tapers whose energy is maximally concentrated in a chosen bandwidth $\block{-W, W}$. These tapers are the discrete prolate spheroidal sequences (DPSS) of Slepian~\cite{slepian1978dpss}; the first $K \approx 2 N_t W - 1$ are effectively leakage-free. The multitaper CSD estimate for channels $p,q$ is
 \begin{eqnarray}
-\hat G_{p q}\mat{f} &=& \frac{1}{K}\sum_{k=0}^{K-1} Y^{(k)}_{p}\mat{f}\; {Y^{(k)}_{q}\mat{f}}^*, \qquad Y^{(k)}_{p}\mat{f} = \mathcal{F}\block{w^{(k)}_t\, y_{p, t}},
+\hat G_{p q}\mat{f} &=& \frac{1}{K}\sum_{k=0}^{K-1} Y^{(k)}_{p}\mat{f}\; {Y^{(k)}_{q}\mat{f}}^*, \qquad Y^{(k)}_{p}\mat{f} = \mathcal{F}\block*{w^{(k)}_t\, y_{p, t}},
 \end{eqnarray}
 where $w^{(k)}$ is the $k$-th DPSS taper and $y_{p, t}$ is the measured record on channel~$p$. The estimator has approximately $2K$ degrees of freedom, low bias by design, and is manifestly Hermitian positive semi-definite because it is an average of rank-one outer products. Percival and Walden~\cite{percival_walden_1993} give the standard univariate treatment; Walden~\cite{walden2000multivariate} extends it to the MIMO case with jackknife error bars on cross-spectral phase and coherence.
 
@@ -410,7 +491,9 @@ The loss $\Xi\mat{\psi}$ is smooth in the free phases $\psi_{q g}$ and its analy
 %=============================================================================================================================
 \subsection*{Comparison with generic gradient-based optimizers}
 %=============================================================================================================================
-The loss and its analytic gradient make no solver-specific assumption: the same objective can be handed directly to any bound-constrained gradient-based optimizer, which is the point of exposing the gradient in closed form at all. Figure~\ref{fig:optcompare} compares SciPy's L-BFGS-B -- the framework's default -- against NLopt's CCSAQ and SciPy's SLSQP on the reference single-channel kurtosis-$5$ problem, using the identical gradient, the same box bounds $\psi\in[-\pi,\pi]$, and a matched early-stop threshold ($\Xi < 10^{-10}$). All three reach the threshold. L-BFGS-B needs about a third of the evaluations CCSAQ does at $N_{\rm free}=\optfreemax$ free phases (Table~\ref{tab:optcompare}) and is faster than CCSAQ at every size tested. SLSQP reaches the threshold in a comparable number of evaluations but solves a dense quadratic subproblem every iteration, so its per-block cost grows far faster with problem size: at $N_{\rm free}=\optfreemax$ it is ${\approx}\slsqpratio\times$ slower than CCSAQ, which rules it out at the phase counts used throughout this paper (up to ${\approx}16{,}000$ in the channel-scaling study below).
+The loss and its analytic gradient make no solver-specific assumptions, allowing the same objective to be handed directly to any bound-constrained gradient-based optimizer—bypassing costly finite-difference approximations while preserving numerical precision.
+
+Figure~\ref{fig:optcompare} compares SciPy's L-BFGS-B -- the framework's default -- against NLopt's CCSAQ and SciPy's SLSQP on the reference single-channel kurtosis-$5$ problem, using the identical gradient, the same box bounds $\psi\in[-\pi,\pi]$, and a matched early-stop threshold ($\Xi < 10^{-10}$). All three reach the threshold. L-BFGS-B needs about a third of the evaluations CCSAQ does at $N_{\rm free}=\optfreemax$ free phases (Table~\ref{tab:optcompare}) and is faster than CCSAQ at every size tested. SLSQP reaches the threshold in a comparable number of evaluations but solves a dense quadratic subproblem every iteration, so its per-block cost grows far faster with problem size: at $N_{\rm free}=\optfreemax$ it is ${\approx}\slsqpratio\times$ slower than CCSAQ, which rules it out at the phase counts used throughout this paper (up to ${\approx}16{,}000$ in the channel-scaling study below).
 
 The advantage compounds under the warm-started $\beta$-continuation used for crest minimization. Table~\ref{tab:betacont} runs the same continuation as Table~\ref{tab:crestbench} below on all five Retzler setups with both optimizers: L-BFGS-B matches or slightly improves on CCSAQ's achieved crest in every setup, at ${\approx}\betacontevalreduction\times$ fewer loss evaluations on average. We therefore use SciPy's L-BFGS-B as the default optimizer throughout this paper; NLopt's CCSAQ remains a drop-in alternative given the identical gradient and is retained here as the comparison baseline.
 
@@ -440,7 +523,9 @@ The advantage compounds under the warm-started $\beta$-continuation used for cre
 %=============================================================================================================================
 \subsection*{Software architecture and verification}
 %=============================================================================================================================
-The reference implementation\footnote{\url{https://github.com/luchp/mimoshape}} is a small NumPy/SciPy package: one module of stateless numerics (moments, cross-moments, crest surrogate, and their analytic gradients) and one module that assembles them into a synthesis problem and drives SciPy's L-BFGS-B optimizer. Every analytic gradient in this paper -- including the cross-moment and crest-surrogate derivatives -- is verified by the unit-test suite against central-difference numerical gradients on randomized problems (random spectra, channel counts, moment tuples and surrogate stiffnesses), and the suite runs on every change. Every figure and table in this paper is regenerated by a single script with fixed random seeds.
+The reference implementation\footnote{\url{https://github.com/luchp/mimoshape}} is a small NumPy/SciPy package: one module of stateless numerics (moments, cross-moments, crest surrogate, and their analytic gradients) and one module that assembles them into a synthesis problem and drives SciPy's L-BFGS-B optimizer.
+
+Every analytic gradient in this paper -- including the cross-moment and crest-surrogate derivatives -- is verified by the unit-test suite against central-difference numerical gradients on randomized problems (random spectra, channel counts, moment tuples and surrogate stiffnesses), and the suite runs on every change. Every figure and table in this paper is regenerated by a single script with fixed random seeds.
 
 %=============================================================================================================================
 \section*{Examples}
@@ -485,7 +570,9 @@ All examples in this section are produced by the reference implementation.\footn
 
 \textbf{Minimum crest factor.} Figure~\ref{fig:crest} shows the crest surrogate of the previous section at work on the flat-spectrum single-channel problem ($N_t = 4096$), for the full band and for a half-band spectrum with a zero upper tail. The $\beta$-continuation (doubling from $5$ to $320$, warm-started) reaches a sampled crest factor of ${\approx}\crestfullsampled$ for the full band and ${\approx}\cresthalfsampled$ for the half band, consistently across random seeds; direct single-stage runs at high $\beta$ plateau near $\crestfulldirect$ despite several times the iteration budget. Minimum crest and minimum kurtosis are \emph{different} signals: the crest-optimal blocks settle at kurtosis ${\approx}\crestfullkurt$, visibly above the minimum achievable kurtosis of ${\approx}\kurtfloor$ for the same spectrum.
 
-The sampled numbers must, however, be read against the logical-versus-physical caveat, and here the effect is dramatic rather than cosmetic. Re-evaluating the optimized blocks on an $8\times$ zero-padded reconstruction -- the ideal band-limited interpolation, a proxy for the continuous DAC output; the ZOH droop and reconstruction-filter response of a real playback chain are separate linear effects, see Appendix~A -- gives a physical crest of ${\approx}\crestfullphysical$ for the full-band signal versus ${\approx}\cresthalfphysical$ for the half-band signal. With near-Nyquist content the optimizer exploits the sample grid: it parks the waveform's peaks \emph{between} the samples, and the sampled crest of $\crestfullsampled$ -- impossibly below the $\sqrt{2}$ of a constant-envelope signal -- is entirely an artifact. The half-band signal, whose reconstruction cannot oscillate between samples, degrades only mildly and its physical crest of ${\approx}\cresthalfphysical$ is the number that reaches the test article. The same reasoning extends \emph{inside} the band: a brickwall band edge forces sinc-like ringing into every reconstruction, and smoothing the edge removes it -- replacing the brickwall by a raised-cosine roll-off over the top $10\%$ of the band lowers the physical crest further to ${\approx}\cresttaperphysical$, while the sampled crest is indifferent to the edge shape. For crest-critical drive signals the spectrum should therefore keep a zero Nyquist tail, exactly as Appendix~A prescribes for kurtosis, and preferably a tapered band edge; the resulting waveform is a constant-envelope, noise-like block with no visible chirp structure, at a physical crest competitive with classical single-channel multisine results obtained at far lower tone counts -- a claim Appendix~C makes quantitative.
+The sampled numbers must, however, be read against the logical-versus-physical caveat, and here the effect is dramatic rather than cosmetic. Re-evaluating the optimized blocks on an $8\times$ zero-padded reconstruction -- the ideal band-limited interpolation, a proxy for the continuous DAC output; the ZOH droop and reconstruction-filter response of a real playback chain are separate linear effects, see Appendix~A -- gives a physical crest of ${\approx}\crestfullphysical$ for the full-band signal versus ${\approx}\cresthalfphysical$ for the half-band signal. With near-Nyquist content the optimizer exploits the sample grid: it parks the waveform's peaks \emph{between} the samples, and the sampled crest of $\crestfullsampled$ -- impossibly below the $\sqrt{2}$ of a constant-envelope signal -- is entirely an artifact. The half-band signal, whose reconstruction cannot oscillate between samples, degrades only mildly and its physical crest of ${\approx}\cresthalfphysical$ is the number that reaches the test article. 
+
+The same reasoning extends \emph{inside} the band: a brickwall band edge forces sinc-like ringing into every reconstruction, and smoothing the edge removes it -- replacing the brickwall by a raised-cosine roll-off over the top $10\%$ of the band lowers the physical crest further to ${\approx}\cresttaperphysical$, while the sampled crest is indifferent to the edge shape. For crest-critical drive signals the spectrum should therefore keep a zero Nyquist tail, exactly as Appendix~A prescribes for kurtosis, and preferably a tapered band edge; the resulting waveform is a constant-envelope, noise-like block with no visible chirp structure, at a physical crest competitive with classical single-channel multisine results obtained at far lower tone counts -- a claim Appendix~C makes quantitative.
 
 \begin{figure}[htb]
 \centering
@@ -519,7 +606,13 @@ Appendix~C benchmarks this surrogate, and its $\ell_p$-subsumption variant, agai
 \label{fig:csd}
 \end{figure}
 
-\textbf{MIMO with a measured road record.} The measured-target regime is demonstrated on a $12$-channel road-load record: forces $F_x, F_y, F_z$ and moments $M_x, M_y, M_z$ from instrumented measuring hubs on the left and right rear wheels of a passenger vehicle, sampled at $300\,$Hz over $218\,$s of test track (the anonymized record ships with the reference implementation, so this example regenerates like all others). The record is distinctly non-Gaussian -- channel kurtosis up to $\roadkurtmax$, crest factors up to $\roadcrestmax$ -- which is precisely the regime where Gaussian synthesis under-tests. Nonparametric stationarity checks (reverse-arrangements and runs tests on $32$-segment mean-square and kurtosis sequences, provided by the implementation) reject weak-sense stationarity on $\roadstatrejected$ of $12$ channels at $\alpha = 0.01$, with borderline scores rather than distinct regimes: the file was compiled from road sections of similar character, so a single spectral model is adequate here. Records that mix distinct surfaces call for one model per section; this \emph{multimodel} synthesis (sectionwise estimation with crossfaded or endpoint-matched joints, also part of the implementation) is validated below. Targets are estimated as before (multitaper CSD, $NW = 4$, $64$ segments of $1024$ samples; skewness and kurtosis per channel plus the six left/right co-kurtosis tuples $(k, k, k{+}1, k{+}1)$ -- $30$ moment targets in total). Table~\ref{tab:road} lists all targets and achieved values over $32$ blocks; every moment is reproduced to three decimals. Figure~\ref{fig:roadtraces} compares a measured excerpt with a synthesized block for the least and most heavy-tailed channels, and Figure~\ref{fig:roadcsd} shows the CSD reproduction for the strongly coupled $F_z$ left/right pair: the low-frequency coherence peak of $0.96$ and the cross phase are tracked, with phase scatter confined to bins of vanishing coherence, as the estimator variance predicts. Two engineering numbers from this example quantify earlier claims. First, conditioning: the maximum pairwise coherence over all bins is $\roadcohmax$ and the worst bin condition number of $\hat{\mathbf{G}}$ is ${\sim}\roadcondmax$ -- Cholesky still succeeds, but this record sits close to the regularization regime discussed in the estimation section. Second, throughput: one optimized $12$-channel block of $1024$ samples ($3.4\,$s of drive signal) takes ${\sim}\roadblockms\,$ms on the workstation of Table~\ref{tab:timing} -- roughly three times faster than real time.
+\textbf{MIMO with a measured road record.} The measured-target regime is demonstrated on a $12$-channel road-load record: forces $F_x, F_y, F_z$ and moments $M_x, M_y, M_z$ from instrumented measuring hubs on the left and right rear wheels of a passenger vehicle, sampled at $300\,$Hz over $218\,$s of test track (the anonymized record ships with the reference implementation, so this example regenerates like all others). The record is distinctly non-Gaussian -- channel kurtosis up to $\roadkurtmax$, crest factors up to $\roadcrestmax$ -- which is precisely the regime where Gaussian synthesis under-tests. Nonparametric stationarity checks (reverse-arrangements and runs tests on $32$-segment mean-square and kurtosis sequences, provided by the implementation) reject weak-sense stationarity on $\roadstatrejected$ of $12$ channels at $\alpha = 0.01$, with borderline scores rather than distinct regimes: the file was compiled from road sections of similar character, so a single spectral model is adequate here. 
+
+Records that mix distinct surfaces call for one model per section; this \emph{multimodel} synthesis (sectionwise estimation with crossfaded or endpoint-matched joints, also part of the implementation) is validated below. 
+
+Targets are estimated as before (multitaper CSD, $NW = 4$, $64$ segments of $1024$ samples; skewness and kurtosis per channel plus the six left/right co-kurtosis tuples $(k, k, k{+}1, k{+}1)$ -- $30$ moment targets in total). Table~\ref{tab:road} lists all targets and achieved values over $32$ blocks; every moment is reproduced to three decimals. Figure~\ref{fig:roadtraces} compares a measured excerpt with a synthesized block for the least and most heavy-tailed channels, and Figure~\ref{fig:roadcsd} shows the CSD reproduction for the strongly coupled $F_z$ left/right pair: the low-frequency coherence peak of $0.96$ and the cross phase are tracked, with phase scatter confined to bins of vanishing coherence, as the estimator variance predicts.
+
+Two engineering numbers from this example quantify earlier claims. First, conditioning: the maximum pairwise coherence over all bins is $\roadcohmax$ and the worst bin condition number of $\hat{\mathbf{G}}$ is ${\sim}\roadcondmax$ -- Cholesky still succeeds, but this record sits close to the regularization regime discussed in the estimation section. Second, throughput: one optimized $12$-channel block of $1024$ samples ($3.4\,$s of drive signal) takes ${\sim}\roadblockms\,$ms on the workstation of Table~\ref{tab:timing} -- roughly three times faster than real time.
 
 \begin{table}[htb]
 \centering
@@ -543,7 +636,9 @@ Appendix~C benchmarks this surrogate, and its $\ell_p$-subsumption variant, agai
 \label{fig:roadcsd}
 \end{figure}
 
-\textbf{Multimodel synthesis of a two-regime record.} The multimodel claim of the estimation section gets a minimal worked validation on a record with a genuinely non-stationary structure: a Gaussian variant of the two-channel surrogate of the MIMO example (same coloring and shared-source correlation), whose second half is roughened -- level ${\times}2.5$ with a mild memoryless tail-heavying -- so the two halves have kurtosis $\mmkurtrecord$. The reverse-arrangements test on the $32$-segment mean-square sequence rejects stationarity decisively ($\abs{z} = \mmzrecord$). A single model estimated over the full record reproduces what it was fed -- the \emph{pooled} statistics: its synthesis is stationary by construction ($\abs{z} = \mmzsingle$) and its two halves land at kurtosis $\mmkurtsingle$, matching neither regime. This is the variance-mixture effect: pooling two Gaussian-like regimes of different level manufactures heavy tails ($\approx 7.5$ here) that no section of the real environment possesses, and the synthesizer then faithfully reproduces the artifact everywhere. Splitting the record into $8$ sections, estimating one CSD-plus-moment model each (multitaper, $N_{\m{fft}} = 2048$) and synthesizing four crossfaded blocks per section restores the regime structure: the segment mean-square profile tracks the measured step (Figure~\ref{fig:multimodel}, $\abs{z} = \mmzmulti$) and the per-half kurtosis returns to $\mmkurtmulti$. The block rotation used by the crossfade is a circular shift -- a pure linear phase, statistically neutral -- so the joints add no spectral or moment distortion beyond the fade itself.
+\textbf{Multimodel synthesis of a two-regime record.} The multimodel claim of the estimation section gets a minimal worked validation on a record with a genuinely non-stationary structure: a Gaussian variant of the two-channel surrogate of the MIMO example (same coloring and shared-source correlation), whose second half is roughened -- level ${\times}2.5$ with a mild memoryless tail-heavying -- so the two halves have kurtosis $\mmkurtrecord$. The reverse-arrangements test on the $32$-segment mean-square sequence rejects stationarity decisively ($\abs{z} = \mmzrecord$). A single model estimated over the full record reproduces what it was fed -- the \emph{pooled} statistics: its synthesis is stationary by construction ($\abs{z} = \mmzsingle$) and its two halves land at kurtosis $\mmkurtsingle$, matching neither regime. 
+
+This is the variance-mixture effect: pooling two Gaussian-like regimes of different level manufactures heavy tails ($\approx 7.5$ here) that no section of the real environment possesses, and the synthesizer then faithfully reproduces the artifact everywhere. Splitting the record into $8$ sections, estimating one CSD-plus-moment model each (multitaper, $N_{\m{fft}} = 2048$) and synthesizing four crossfaded blocks per section restores the regime structure: the segment mean-square profile tracks the measured step (Figure~\ref{fig:multimodel}, $\abs{z} = \mmzmulti$) and the per-half kurtosis returns to $\mmkurtmulti$. The block rotation used by the crossfade is a circular shift -- a pure linear phase, statistically neutral -- so the joints add no spectral or moment distortion beyond the fade itself.
 
 \begin{figure}[htb]
 \centering
@@ -562,7 +657,7 @@ The moments $P_\mathbf{i}$ and $M_\mathbf{i}$ defined above are moments of the d
 
 A single-line example makes this concrete. Let $x_k$ have all its energy in one spectral bin $f_0$ with amplitude $A$. The physical continuous-time signal is a sine wave with kurtosis $M_{k^{(4)}, \m{phys}} = 3/2$ regardless of $f_0$. The sampled sequence, however, is $A\cos\mat{2\pi t f_0/N_t + \psi}$ with $t\in\seq{0,\ldots,N_t-1}$; for $f_0 \ll N_t/2$ this samples the sine densely and the sample-moment kurtosis $M_{k^{(4)}} \to 3/2$, but as $f_0 \to N_t/2$ the sampled sequence becomes the two-valued alternation $\block{+A, -A, +A, -A, \ldots}$ whose sample-moment kurtosis is $1$. The worst-case discrete-versus-physical mismatch is a full ${\approx}33\%$ in kurtosis, achieved precisely at Nyquist.
 
-This is the engineering reason for the requirement $h_{k j,\, N_t/2} = 0$ imposed at the outset: no realizable reconstruction filter can pass content at the Nyquist bin cleanly, so any energy the optimizer placed there would be physically distorted by the analog path before reaching the plant, and the sample-domain moment computed there does not correspond to any physical reality. Setting the Nyquist bin to zero is thus both a mathematical convenience -- it removes a special-case real-only frequency bin from the cosine expansion -- and a physical necessity for any signal that will be played out through a DAC. In practice, we go further and assign zero target CSD above a comfortable guard band (typically $\lesssim 0.4\, f_s$), which keeps the Nyquist-tail moment error below ${\sim}1\%$ for spectra of practical interest.
+This is the engineering reason for the requirement $h_{k j,\, N_t/2} = 0$ imposed at the outset: no realizable reconstruction filter can pass content at the Nyquist bin cleanly, so any energy the optimizer placed there would be physically distorted by the analog path before reaching the plant, and the sample-domain moment computed there does not correspond to any physical reality. Setting the Nyquist bin to zero is thus both a mathematical convenience -- it removes a special-case real-only frequency bin from the cosine expansion -- and a physical necessity for any signal that will be played out through a DAC. In practice, we go further and recommend a guard band above $f_s/4$ (half the Nyquist frequency) with a target CSD of zero. This keeps the mismatch below ${\sim}1\,\%$ for spectra of practical interest.
 
 Two operating regimes result. In the \emph{measured-target regime} the mismatch is benign by cancellation: target moments are sample moments of an ADC record, and the synthesizer produces sample moments of the same statistical character. If the measurement ADC and the playback DAC use the same sample rate and comparable anti-alias / reconstruction filtering, the Nyquist-tail distortion is applied identically on both sides and cancels; the physical playback then matches the physical original in moment even though the intermediate quantities being matched live in the sampled domain. This is exactly the practical outcome the end user cares about. In the \emph{analytic-target regime} the user specifies $\mu_\mathbf{i}$ from theory or a spec, and should either band-limit the target CSD as above, or interpret the shaped moments as digital-domain quantities that the digital controller consumes directly -- a legitimate interpretation, since the controller sees the sampled signal and most plant dynamics of practical interest live well below Nyquist.
 
@@ -574,25 +669,33 @@ A related linear effect -- the $|\m{sinc}\mat{f/f_s}|$ amplitude taper of a zero
 
 Two common use cases require control over block boundaries: (i) \emph{periodic FRF estimation}, where a single block is repeated $N$ times and the first $M$ repetitions are discarded so the response settles into a periodic steady state before averaging; and (ii) \emph{live streaming}, where independent blocks -- each with fresh random phases -- are concatenated on the fly for extended shaker runs.
 
-\textbf{Case (i) is free of seam artifacts, but not of start-up ones.} The inverse-FFT signal is periodic with period $N_t$ by construction: $x_{k, N_t} = x_{k, 0}$ and the derivative is likewise periodic. Repeating one block produces a smooth concatenation on the ring $\mathbb{Z}/N_t\mathbb{Z}$; the transient observed at the test rig is entirely the plant's response to a periodic input, which is exactly what one wishes to average out. In practice, however, the \emph{first} block still starts from rest, and an arbitrary head value $x_{k,0}$ produces an initial discontinuity when the drive is switched on. One therefore still wants a defined start value (typically zero) together with a short fade-in taper on the first repetition -- so the endpoint constraint of case (ii) below is useful here too, even though the repetitions themselves splice exactly.
+\textbf{Case (i) is free of seam artifacts, but not of start-up and shut-down ones.} The inverse-FFT signal is periodic with period $N_t$ by construction: $x_{k, N_t} = x_{k, 0}$, and the derivative is likewise periodic. Repeating one block produces a smooth concatenation on the ring $\mathbb{Z}/N_t\mathbb{Z}$; the transient observed at the test rig is entirely the plant's response to a periodic input, which is exactly what one wishes to average out. In practice, however, the \emph{first} and \emph{last} blocks still start and end from rest, where an arbitrary boundary value $x_{k,0}$ produces a discontinuity when the drive is switched on or off. One therefore still wants defined start and end values (typically zero) together with short tapers (or the explicit boundary constraints of Case (ii) below), even though the periodic repetitions themselves splice seamlessly.
 
-\textbf{Case (ii) requires a fringe constraint.} Successive blocks $B$ and $B{+}1$ share their seam at $t=N_t \equiv 0$. Unless $x^{B+1}_{k, 0} = x^{B}_{k, N_t} \equiv x^{B}_{k, 0}$ (and the analogous condition on the slope) the stream has a jump or a slope kink at every block boundary, showing up in the effective spectrum as broadband leakage. The synthesizer fixes the block's head value and slope to prescribed constants $c^{(0)}_k$, $c^{(1)}_k$ for every block; consecutive blocks then splice with $C^1$ continuity by construction. Zero is the natural default and is used throughout the reference implementation, giving a signal that starts and returns to rest at every block boundary.
+\textbf{Case (ii) requires a fringe constraint.} Successive blocks $B$ and $B{+}1$ share their seam at $t=N_t \equiv 0$. Unless $x^{B+1}_{k, 0} = x^{B}_{k, N_t} \equiv x^{B}_{k, 0}$ (and the analogous condition on the slope), the stream has a jump or a slope kink at every block boundary, showing up in the effective spectrum as broadband leakage. 
+
+The synthesizer fixes the block's head value and slope to prescribed constants $c^{(0)}_k$, $c^{(1)}_k$ for every block; consecutive blocks then splice with $C^1$ continuity by construction. Zero is the natural default and is used throughout the reference implementation, giving a signal that starts and returns to rest at every block boundary.
 
 The head value and its time derivative follow directly from the cosine expansion of $x_{k,t}$:
 \begin{eqnarray}
-x_{k, 0}      &=& \frac{2}{N_t}\sum_{f=1}^{N_t/2-1}\sum_{j=0}^{N_j-1} h_{k j f}\,\cos\mat{\theta_{k j f}+\psi_{j f}}
-	\;=\; \frac{2}{N_t}\sum_{f,j}\re{H_{k j f}\, u_{j f}}, \\
-\dot x_{k, 0} &=& -\frac{2}{N_t}\sum_{f=1}^{N_t/2-1}\sum_{j=0}^{N_j-1}\omega_f\,h_{k j f}\,\sin\mat{\theta_{k j f}+\psi_{j f}}
-	\;=\; -\frac{2}{N_t}\sum_{f,j}\omega_f\,\im{H_{k j f}\, u_{j f}},
+	x_{k, 0} &=& \frac{2}{N_t}\sum_{f=1}^{N_t/2-1}\sum_{j=0}^{N_j-1} h_{k j f}\,
+					\cos\mat{\theta_{k j f}+\psi_{j f}}
+			\;=\; \frac{2}{N_t}\sum_{f,j}\re{H_{k j f}\, u_{j f}}, \\
+	\dot x_{k, 0} &=& -\frac{2}{N_t}\sum_{f=1}^{N_t/2-1}\sum_{j=0}^{N_j-1} 
+					\omega_f\,h_{k j f}\,\sin\mat{\theta_{k j f}+\psi_{j f}}
+				  \;=\; -\frac{2}{N_t}\sum_{f,j}\omega_f\,\im{H_{k j f}\, u_{j f}},
 \end{eqnarray}
+
 with $\omega_f = 2\pi f / N_t$. The synthesizer adds the endpoint terms to the loss,
 \begin{eqnarray}
-\Xi_{\m{ep}} &=& \frac{1}{2}\sum_{k=0}^{N_j-1}\block{w^{(0)}_k\mat{x_{k, 0} - c^{(0)}_k}^2 + w^{(1)}_k\mat{\dot x_{k, 0} - c^{(1)}_k}^2},
+	\Xi_{\m{ep}} &=& \frac{1}{2}\sum_{k=0}^{N_j-1}
+		\block*{  w^{(0)}_k\mat*{x_{k, 0} - c^{(0)}_k}^2 
+			    + w^{(1)}_k\mat*{\dot x_{k, 0} - c^{(1)}_k}^2},
 \end{eqnarray}
+
 and the gradients follow immediately:
 \begin{eqnarray}
-\frac{\partial x_{k, 0}}{\partial \psi_{q g}}      &=& -\frac{2}{N_t}\,\im{H_{k q g}\, u_{q g}}, \\
-\frac{\partial \dot x_{k, 0}}{\partial \psi_{q g}} &=& -\frac{2\omega_g}{N_t}\,\re{H_{k q g}\, u_{q g}}.
+	\frac{\partial x_{k, 0}}{\partial \psi_{q g}}      &=& -\frac{2}{N_t}\,\im{H_{k q g}\, u_{q g}}, \\
+	\frac{\partial \dot x_{k, 0}}{\partial \psi_{q g}} &=& -\frac{2\omega_g}{N_t}\,\re{H_{k q g}\, u_{q g}}.
 \end{eqnarray}
 No additional FFT is required: the endpoint contribution to the total gradient is a single complex multiply--add per $(q,g)$ per constrained channel. This is the degenerate case of Proposition~\ref{prop:fft} with the sample-average replaced by point evaluation at $t{=}0$; the ``FFT of the pointwise gradient'' collapses to a Kronecker delta and evaluates trivially. Constraining the block's tail is redundant given the block's built-in periodicity and given that fixing every block's head simultaneously fixes the tail to which each previous block will connect.
 
@@ -602,9 +705,17 @@ The endpoint constraint removes $2 N_j$ degrees of freedom from the $N_j\mat{N_t
 \section*{Appendix C: Benchmark against dedicated crest-factor optimizers}\label{app:crestbench}
 %=============================================================================================================================
 
-Minimum-crest multisine design has a four-decade literature of specialized algorithms, and the five single-channel setups collected by Retzler \emph{et al.}~\cite{retzler2022crest} -- flat and shaped amplitude ladders, sparse and dense harmonic grids, block lengths from $800$ to $8192$ -- are the sharpest published yardstick, with min/avg sampled-crest statistics over $1000$ random starts for four dedicated methods. Table~\ref{tab:crestbench} repeats the experiment with the present framework's default optimizer (SciPy's L-BFGS-B), from $\crestbenchseeds$ independent random starts per setup, with two objective routes. The first is the native $\beta$-continued logcosh surrogate of the main text; it lands within a few percent of the dedicated optimizers on every setup: average crest $0.1$--$2\%$ above the best published method (the widest gap on the shaped-amplitude setup B), and on the sparse-grid setups C and D the $\crestbenchseeds$-start minima reproduce the published $1000$-start minima to three decimals, while on the dense flat gratings A and E the specialists retain a ${\approx}1.5\%$ edge at the minimum. The second route makes the subsumption point instead: Guillaume's $\ell_p$ objective itself, entered as the scaled-function target $g\mat{z}=\abs{z}^p$ with $p$ doubling from $4$ to $512$ -- no crest-specific code at all, just the two pointwise functions. It reproduces the same character but trails by a wider margin on the flat gratings (up to ${\approx}7.5\%$ average crest on setup E): the far steeper, more ill-conditioned gradient of $|z|^p$ at $p=512$ makes the coarse eight-stage continuation a less reliable guide for L-BFGS-B's line search than it is for the smooth logcosh surrogate. Substituting NLopt's CCSAQ for this route alone recovers the earlier accuracy (setup E: average crest $1.3928$, ${\approx}1.8\%$ above published) -- a concrete instance of the two optimizers, despite sharing the identical analytic gradient, suiting different regions of the objective landscape. A start costs $\crestbenchtimes\,$s single-core depending on setup and route. We conclude that a general moment-shaping framework buys entry to the specialists' benchmark at the cost of the last few percent of crest -- and that anyone needing that percent can graft the dedicated polishers~\cite{guillaume1991crest,retzler2022crest} onto our optimum, or, for steep high-order objectives, swap in CCSAQ, since all methods agree on the character of the solution.
+Minimum-crest multisine design has a four-decade literature of specialized algorithms, and the five single-channel setups collected by Retzler \emph{et al.}~\cite{retzler2022crest} -- flat and shaped amplitude ladders, sparse and dense harmonic grids, block lengths from $800$ to $8192$ -- are the sharpest published yardstick, with min/avg sampled-crest statistics over $1000$ random starts for four dedicated methods. 
 
-The comparison closes a historical loop. The same $31$- and $100$-tone flat multisines (setups A and E) served Steinwolf~\cite{steinwolf2011ifft} to demonstrate crest reduction by \emph{closed-form} phase selection: his analytic assignment reaches a crest of ${\approx}1.5$, and sequential minimization of even moments up to order $128$ reaches ${\approx}1.4$, both quoted on multi-block quasi-random realizations rather than one optimized period, so the numbers are indicative rather than directly comparable. They are nonetheless consistent with where both of our objective routes land before the dedicated Chebyshev-type machinery buys the final percent. In the bioimpedance literature, where excitation amplitude is capped by tissue linearity, Ojarand and Min~\cite{ojarand2017crest} report $1.365$ for $26$ flat consecutive tones as the lowest published crest of its class, with tabulated small-tone-count optima in~\cite{ojarand2014crest} -- the same regime as setup A, reached there by exhaustive phase search.
+Table~\ref{tab:crestbench} repeats the experiment with the present framework's default optimizer (SciPy's L-BFGS-B), from $\crestbenchseeds$ independent random starts per setup, with two objective routes. The first is the native $\beta$-continued logcosh surrogate of the main text; it lands within a few percent of the dedicated optimizers on every setup: average crest $0.1$--$2\%$ above the best published method (the widest gap on the shaped-amplitude setup B), and on the sparse-grid setups C and D the $\crestbenchseeds$-start minima reproduce the published $1000$-start minima to three decimals, while on the dense flat gratings A and E the specialists retain a ${\approx}1.5\%$ edge at the minimum. 
+
+The second route makes the subsumption point instead: Guillaume's $\ell_p$ objective itself, entered as the scaled-function target $g\mat{z}=\abs{z}^p$ with $p$ doubling from $4$ to $512$ -- no crest-specific code at all, just the two pointwise functions. It reproduces the same character but trails by a wider margin on the flat gratings (up to ${\approx}7.5\%$ average crest on setup E): the far steeper, more ill-conditioned gradient of $|z|^p$ at $p=512$ makes the coarse eight-stage continuation a less reliable guide for L-BFGS-B's line search than it is for the smooth logcosh surrogate. 
+
+Substituting NLopt's CCSAQ for this route alone recovers the earlier accuracy (setup E: average crest $1.3928$, ${\approx}1.8\%$ above published) -- a concrete instance of the two optimizers, despite sharing the identical analytic gradient, suiting different regions of the objective landscape. A run takes costs $\crestbenchtimes\,$s single-core depending on setup and route. We conclude that a general moment-shaping framework buys entry to the specialists' benchmark at the cost of the last few percent of crest -- and that anyone needing that percent can graft the dedicated polishers~\cite{guillaume1991crest,retzler2022crest} onto our optimum, or, for steep high-order objectives, swap in CCSAQ, since all methods agree on the character of the solution.
+
+The comparison closes a historical loop. The same $31$- and $100$-tone flat multisines (setups A and E) served Steinwolf~\cite{steinwolf2011ifft} to demonstrate crest reduction by \emph{closed-form} phase selection: his analytic assignment reaches a crest of ${\approx}1.5$, and sequential minimization of even moments up to order $128$ reaches ${\approx}1.4$, both quoted on multi-block quasi-random realizations rather than one optimized period, so the numbers are indicative rather than directly comparable. They are nonetheless consistent with where both of our objective routes land before the dedicated Chebyshev-type machinery buys the final percent. 
+
+In the bioimpedance literature, where excitation amplitude is capped by tissue linearity, Ojarand and Min~\cite{ojarand2017crest} report $1.365$ for $26$ flat consecutive tones as the lowest published crest of its class, with tabulated small-tone-count optima in~\cite{ojarand2014crest} -- the same regime as setup A, reached there by exhaustive phase search.
 
 \begin{table}[htb]
 \centering
