@@ -8,13 +8,14 @@ license = { file = "LICENSE" }
 
 requires-python = ">=3.10"
 dependencies = [
+    "bibtexparser>=1.4.4",
     "numpy>=1.26",
     "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
 examples = ["matplotlib", "nlopt>=2.7"]
-release = ["PyPDF2", "PyGithub", "tomli_w"]
+release = ["PyPDF2", "PyGithub", "tomli_w", "bibtexparser"]
 
 [dependency-groups]
 dev = ["pytest>=8"]

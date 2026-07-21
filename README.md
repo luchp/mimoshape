@@ -4,9 +4,9 @@ Pure-NumPy optimization engine for the phase-domain synthesis of multi-channel (
 that match a prescribed Cross-Spectral Density (CSD) matrix while simultaneously optimizing 
 an arbitrary ensemble of user-definable, smooth memoryless functionals.
 
-The CSD is enforced structurally through a Cholesky factor `H`; the remaining
+ThThe CSD is enforced structurally through a Cholesky factor `H`; the remaining
 phase degrees of freedom are optimised with analytic gradients (scipy's
-L-BFGS-B). See `paper/sss.tex` for the full derivation.
+L-BFGS-B). See `papers/26293/sss.tex` for the full derivation.
 
 Specific targets are included for higher-order diagonal and joint moments (skewness, kurtosis, co-skewness, co-kurtosis), and 
 directly minimised functionals such as a smooth crest-factor surrogate.
@@ -22,8 +22,8 @@ There are two live web applications where you try it yourself: [Crest minimizer]
 - `src/mimoshape/multimodel.py` — piecewise synthesis for non-stationary records: per-section models, block merging (crossfade / C1 / zero)
 - `tests/` — analytic-vs-numerical gradient checks
 - `examples/` — runnable demos
-- `scripts/make_figures` — regenerates every figure and table in the papers, pass in -p paperid, where paperid is the directory in papers/
-  (fixed seeds): `uv run --extra examples python scripts/make_figures.py`
+- `scripts/figures` — regenerates every figure and table in the papers, pass in -p paperid, where paperid is the directory in papers/
+  (fixed seeds): `figures -p 26293`
 - `papers/` — LaTeX source of the papers
 
 ## Quick start
@@ -72,7 +72,15 @@ scripts\figures -p 26293
 
 ## License
 
-MIT (code). The paper is licensed CC BY 4.0.
+This reference implementation is released under the **MIT License**. The underlying paper is licensed under **CC BY 4.0**.
+
+--- 
+
+### Commercial C Implementation
+
+A high-performance C implementation, with zero dependencies, zero dynamic memory allocations, and optimized for real-time/embedded deployment, is available under a commercial license. 
+
+For licensing inquiries or evaluation, please contact luc@sensemagic.nl
 
 ## How to Cite
 

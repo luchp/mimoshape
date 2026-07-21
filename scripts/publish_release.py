@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import extract_abstract
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
@@ -496,6 +497,18 @@ def write_citation_cff(code: CodeMetadata, released_at: datetime) -> Path:
     path.write_text(content, encoding="utf-8")
     return path
 
+def write_abstract(paper: PaperMetadata) ->Path:
+    paper_dir = REPO_ROOT / "papers" / paper.paper_id
+    tex_path = paper_dir / paper.texmain
+    bib_path = tex_path.with_name("refs.bib")
+    if not tex_path.is_file():
+        raise ReleaseAbort(f"TeX entry file does not exist: {tex_path}")
+    if not bib_path.is_file():
+        raise ReleaseAbort(f"BIB file does not exist: {bib_path}")
+    abstract = extract_abstract.extract_and_clean_abstract(tex_path, bib_path)
+    abs_path = tex_path.with_name(tex_path.stem + "_abstract.txt")
+    abs_path.write_text(abstract, encoding="utf-8")
+    return abs_path
 
 def write_provenance(
     *,
@@ -659,7 +672,9 @@ def main() -> None:
     print("Tests complete.", flush=True)
     print("Building paper PDF...", flush=True)
     pdf_path = build_paper_pdf(paper)
+    abs_path = write_abstract(paper)
     print(f"Built PDF: {pdf_path}", flush=True)
+    print(f"Wrote abstract: {abs_path}", flush=True)
     print("Writing provenance and citation metadata...", flush=True)
     prov_path = write_provenance(
         platfrm=platfrm,
@@ -671,7 +686,6 @@ def main() -> None:
         pdf_path=pdf_path,
         command=command,
     )
-    write_citation_cff(code, released_at)
     # Actually create and push tags and release
     if actions.create_code_tag_local:
         print(f"Creating local code tag {code_tag}...", flush=True)
