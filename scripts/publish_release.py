@@ -4,8 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
-import os
-import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -455,13 +453,16 @@ def build_paper_pdf(paper: PaperMetadata) -> Path:
         raise ReleaseAbort(f"TeX entry file does not exist: {tex_path}")
     tex_file_name = tex_path.name
     tex_stem = tex_path.stem
+    pdf_path = paper_dir / f"{tex_stem}.pdf"
+    # delete to pdf if it exists
+    pdf_path.unlink(missing_ok=True)
+    # run latex
     pdflatex = ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", tex_file_name]
     run_checked(pdflatex, cwd=paper_dir)
     run_checked(["bibtex", tex_stem], cwd=paper_dir)
     run_checked(pdflatex, cwd=paper_dir)
     run_checked(pdflatex, cwd=paper_dir)
     # check that we generated a pdf
-    pdf_path = paper_dir / f"{tex_stem}.pdf"
     if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
         raise ReleaseAbort(f"Expected PDF was not generated: {pdf_path}")
     # build the release path
@@ -470,7 +471,6 @@ def build_paper_pdf(paper: PaperMetadata) -> Path:
     pdf_out_path = paper_dir / f"{last_name}_{title}_v{paper.version}.pdf"
     pdf_path.copy(pdf_out_path)
     return pdf_out_path
-
 
 def write_citation_cff(code: CodeMetadata, released_at: datetime) -> Path:
     keywords_block = "\n".join(f'  - "{k}"' for k in code.keywords)
@@ -578,7 +578,6 @@ def upload_release_asset(upload_url_template: str, asset_path: Path, token: str)
             f"GitHub asset upload failed for {asset_path.name} ({exc.code}): {details}"
         ) from exc
 
-
 def ensure_required_tools() -> None:
     print("Checking required tools...", flush=True)
     for tool in ("git", "uv", "pdflatex", "bibtex"):
@@ -595,9 +594,7 @@ def ensure_required_tools() -> None:
     print("Required tools available.", flush=True)
 
 def load_secrets():
-    with open(SCRIPTS_DIR / "secrets.json") as f:
-        secrets = json.load(f)
-    return secrets
+    return load_json(SCRIPTS_DIR / "secrets.json")
 
 def main() -> None:
     args = parse_args()
@@ -620,10 +617,8 @@ def main() -> None:
     platfrm = load_platform_metadata()
     code = load_code_metadata(CODE_METADATA_FILE, args.code_version)
     paper = load_paper_metadata(code, args.paper_id)
-    paper_script = SCRIPTS_DIR / "papers" / args.paper_id / "make_figures.py"
-    if not paper_script.is_file():
-        raise ReleaseAbort(f"Missing paper figure script: {paper_script}")
-
+    #
+    # get current state and print planned actions
     secrets = load_secrets()
     token = secrets["GITHUB_TOKEN"]
     if not token:
@@ -653,12 +648,16 @@ def main() -> None:
             planned_actions, code_tag=code_tag, paper_tag=paper_tag
         ):
             print(f" - {action}")
-
+    # Final checks, we can't rebuild the figures because they are not idempotent.
+    # some figures/tables need benchmarks, and there are always (minor) timing differences
+    # so we only check if the scrip is there, build_paper_pdf will fail if the output is missing
     print("Running tests...", flush=True)
+    paper_script = SCRIPTS_DIR / "papers" / args.paper_id / "make_figures.py"
+    if not paper_script.is_file():
+        raise ReleaseAbort(f"Missing paper figure script: {paper_script}")
     run_tests()
     print("Tests complete.", flush=True)
     print("Building paper PDF...", flush=True)
-    #run_paper_figures(paper_script)
     pdf_path = build_paper_pdf(paper)
     print(f"Built PDF: {pdf_path}", flush=True)
     print("Writing provenance and citation metadata...", flush=True)
@@ -673,7 +672,7 @@ def main() -> None:
         command=command,
     )
     write_citation_cff(code, released_at)
-
+    # Actually create and push tags and release
     if actions.create_code_tag_local:
         print(f"Creating local code tag {code_tag}...", flush=True)
         create_annotated_tag(code_tag, f"Code release {code_tag} ({commit})")
@@ -686,7 +685,6 @@ def main() -> None:
     if actions.push_paper_tag:
         print(f"Pushing paper tag {paper_tag}...", flush=True)
         push_tag(paper_tag)
-
     if actions.create_paper_release:
         print(f"Creating GitHub release {paper_tag}...", flush=True)
         release_data = create_github_release(
